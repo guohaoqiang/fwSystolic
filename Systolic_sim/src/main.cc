@@ -1,7 +1,17 @@
 #include "../include/main.h"
 
+DEFINE_int32(pe_counts, 16, "Total number of PEs. n == r * c");
+DEFINE_int32(ar, 1, "Aspect ratio R.");
+DEFINE_int32(ac, 1, "Aspect ratio C.");
+DEFINE_string(data_name, "../data/test_data", "The name of datasets.");
+
+DEFINE_int32(l1_size, 4, "The size of L1 Cache for all PE cluster (in MB).");
+DEFINE_int32(l2_size, 8, "The size of L2 (in MB).");
+DEFINE_string(type, "b","(b)gcnax OR (w)wegnn");
+
 int main(int argc, char *argv[])
 {
+  /*
   optparse::OptionParser parser = optparse::OptionParser();
   parser.add_option("-n", "--pe_counts").type("int").set_default("16").help("Total number of PEs. n == r * c");
   parser.add_option("-r", "--ar").type("int").set_default("1").help("Aspect ratio R.");
@@ -13,6 +23,9 @@ int main(int argc, char *argv[])
   
   optparse::Values& option = parser.parse_args(argc,argv);
   std::shared_ptr<Graph> adj_csr = std::make_shared<Graph>((std::string)option.get("data_name"));  
+  */
+  gflags::ParseCommandLineFlags(&argc, &argv, true);
+  std::shared_ptr<Graph> adj_csr = std::make_shared<Graph>(FLAGS_data_name);  
   adj_csr->print_data();
   
   //std::shared_ptr<Acc> acc = std::make_shared<Acc>((int)option.get("l2_size"),\
