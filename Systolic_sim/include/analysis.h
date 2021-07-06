@@ -28,10 +28,10 @@ class Analysis{
       void print_final(std::string);
       int row_divider = 1;
     //private:
+      std::shared_ptr<Acc> hw;
       std::shared_ptr<Graph> dat;
       int height = 0;
       int len = 0;
-      std::shared_ptr<Acc> hw;
       std::shared_ptr<std::vector<std::shared_ptr<std::vector<int>>>> tiles = std::make_shared<std::vector<std::shared_ptr<std::vector<int>>>>(); 
       std::shared_ptr<std::vector<std::shared_ptr<std::vector<int>>>> tiles_r = std::make_shared<std::vector<std::shared_ptr<std::vector<int>>>>(); 
       std::shared_ptr<std::vector<std::shared_ptr<std::vector<int>>>> tiles_c = std::make_shared<std::vector<std::shared_ptr<std::vector<int>>>>(); 

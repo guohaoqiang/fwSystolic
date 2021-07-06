@@ -18,13 +18,13 @@ class Acc{
     public:
         int l1_support;
         int l2_support;
+        int l2;
         int pes;
         int ar;
         int ac;
 
         //int pec_total;
         int pec_size;
-        int l2;
         int l1;
         //const float pro_latency = 0.00000000214; //in the unit of (unit:s)
         //const float pro_energy = 0.0000000000037;

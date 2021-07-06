@@ -8,34 +8,34 @@ void Pec::print(){
            opt_counts.size()!=l1_read.size() ||\
            opt_counts.size()!=l1_write.size())
        LOG(FATAL)<<"Un..."<<std::endl;
-   for(int i = 0; i<opt_counts.size(); ++i){
+   for(size_t i = 0; i<opt_counts.size(); ++i){
        std::cout<<"opt_counts: ";
        std::cout<<opt_counts.at(i)<<" ";
    }
    std::cout<<std::endl;
-   for(int i = 0; i<opt_counts.size(); ++i){
+   for(size_t i = 0; i<opt_counts.size(); ++i){
        std::cout<<"opt_delay: ";
        std::cout<<opt_delay.at(i)<<" ";
    }
    std::cout<<std::endl;
-   for(int i = 0; i<opt_counts.size(); ++i){
+   for(size_t i = 0; i<opt_counts.size(); ++i){
        std::cout<<"com_delay: ";
        std::cout<<com_delay.at(i)<<" ";
    }
    std::cout<<std::endl;
-   for(int i = 0; i<opt_counts.size(); ++i){
+   for(size_t i = 0; i<opt_counts.size(); ++i){
        std::cout<<"l1_read: ";
        std::cout<<l1_read.at(i)<<" ";
    }
    std::cout<<std::endl;
-   for(int i = 0; i<opt_counts.size(); ++i){
+   for(size_t i = 0; i<opt_counts.size(); ++i){
        std::cout<<"l1_write: ";
        std::cout<<l1_write.at(i)<<" ";
    }
    std::cout<<std::endl;
    LOG(INFO)<<"total delay: "<<std::endl;
    LOG(INFO)<<"total_delay: "<<total_delay.size()<<std::endl;
-   for(int i = 0; i<opt_counts.size(); ++i){
+   for(size_t i = 0; i<opt_counts.size(); ++i){
        std::cout<<"total_delay: ";
        std::cout<<total_delay.at(i)<<" ";
    }

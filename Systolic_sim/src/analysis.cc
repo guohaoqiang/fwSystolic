@@ -27,7 +27,7 @@ void Analysis::run_wegnn(){
     VLOG(0)<<"L1 in each PE cluster: "<<hw->l1<<" KB";
     VLOG(0)<<"L2 on chip: "<<hw->l2<<" MB";
     //VLOG(0)<<"Dataset: "<<dat->name<<"\-"<<dat->nodes<<","<<dat->max_num<<","<<dat->sorted_data.at(0).at(1)-dat->sorted_data.at(0).at(0);
-    VLOG(0)<<"Dataset: "<<dat->name<<"\-"<<dat->nodes<<","<<dat->feature_size<<","<<dat->hiden;
+    VLOG(0)<<"Dataset: "<<dat->name<<"-"<<dat->nodes<<","<<dat->feature_size<<","<<dat->hiden;
 
 }
 void Analysis::run_baseline(){
@@ -39,6 +39,6 @@ void Analysis::run_baseline(){
     VLOG(0)<<"L1 in each PE cluster: "<<hw->l1<<" KB";
     VLOG(0)<<"L2 on chip: "<<hw->l2<<" MB";
     //VLOG(0)<<"Dataset: "<<dat->name<<"\-"<<dat->nodes<<","<<dat->max_num;
-    VLOG(0)<<"Dataset: "<<dat->name<<"\-"<<dat->nodes<<","<<dat->feature_size<<","<<dat->hiden;
+    VLOG(0)<<"Dataset: "<<dat->name<<"-"<<dat->nodes<<","<<dat->feature_size<<","<<dat->hiden;
 
 }

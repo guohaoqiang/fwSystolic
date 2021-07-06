@@ -12,7 +12,7 @@ void Graph::node_sort(const std::vector<std::vector<int>>& in){
 
         //push back rowID
         auto pt = pre_sort_data.insert({key,temp_col_and_val});
-        for(size_t j=0;j<key;++j){
+        for(int j=0;j<key;++j){
             (*pt).second.insert({in.at(1).at(in_counts+j),in.at(2).at(in_counts+j)}); // {col ID,Val}
         }
         in_counts += key;
@@ -35,12 +35,12 @@ void Graph::node_sort(const std::vector<std::vector<int>>& in){
     LOG(INFO) << "node_sort over.";
 }
 
-Graph::Graph(const std::string& name):data(3,std::vector<int>()),\
+Graph::Graph(const std::string& name1):data(3,std::vector<int>()),\
                                     sorted_data(3,std::vector<int>()),\
                                     csr_diag(3,std::vector<int>()){
     
-    this->data_path = name.substr(0,name.find_last_of("\/"));                                    
-    this->name = name.substr(name.find_last_of("\/")+1,-1);                                    
+    this->data_path = name1.substr(0,name1.find_last_of("/"));                                    
+    this->name = name1.substr(name1.find_last_of("/")+1,-1);                                    
     //std::cout<<this->name<<std::endl;
     //this->name = name;
     //this->data = {{},{}};
@@ -70,7 +70,7 @@ Graph::Graph(const std::string& name):data(3,std::vector<int>()),\
         num = this->data.at(0).at(i)-this->data.at(0).at(i-1);
         if(num > this->max_num)
             this->max_num = num;
-        for(size_t j=base;j<base+this->data.at(0).at(i)-this->data.at(0).at(i-1);++j){
+        for(int j=base;j<base+this->data.at(0).at(i)-this->data.at(0).at(i-1);++j){
             temp[this->data.at(1).at(j)] = this->data.at(2).at(j);
             //csr_diag.at(1).push_back(this->data.at(1).at(j));
           //  VLOG(2)<<"this->data.at(1).at("<<j<<") = "<<this->data.at(1).at(j);
@@ -90,12 +90,12 @@ Graph::Graph(const std::string& name):data(3,std::vector<int>()),\
     LOG(INFO) << "graph construct over.";
 }
 
-void Graph::load_adj(const std::string& name){
+void Graph::load_adj(const std::string& name0){
     std::fstream fin;
-    fin.open(this->data_path+"\/"+"n_"+name+".csv",std::ios::in);
+    fin.open(this->data_path+"/"+"n_"+name0+".csv",std::ios::in);
     //std::cout<<this->data_path<<std::endl;
-    //std::cout<<name<<std::endl;
-    //std::cout<<this->data_path+"\/"+"n_"+name+".csv"<<std::endl;
+    //std::cout<<name0<<std::endl;
+    //std::cout<<this->data_path+"\/"+"n_"+name0+".csv"<<std::endl;
     std::string line, word;
     int i = 0;
     while(i<3){

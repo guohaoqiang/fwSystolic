@@ -28,6 +28,7 @@ class Graph{
         int hiden = 16;
         void print_data();
     public:
+        std::vector<std::vector<int>> data;
         std::vector<std::vector<int>> sorted_data;
         std::vector<std::vector<int>> csr_diag;
         int feature_size;
@@ -42,7 +43,6 @@ class Graph{
         std::map<std::string,int> output_dim {{"demo1",2},{"cora",7},{"cora_ml",7},{"citeseer",6},{"polblogs",2},\
                                     {"pubmed",3},{"ppi",121},{"reddit",41},{"yelp",100},{"flickr",7},\
                                     {"amazon",107},{"ogbn",47},{"ppi_large",121}};
-        std::vector<std::vector<int>> data;
         std::multimap<int,std::map<int,int>,std::greater<int>> pre_sort_data;
         void load_adj(const std::string&);
 };
