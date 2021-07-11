@@ -1,12 +1,13 @@
 #include "../include/main.h"
 
 DEFINE_int32(pe_counts, 16, "Total number of PEs. n == r * c");
-DEFINE_int32(ar, 1, "Aspect ratio R.");
-DEFINE_int32(ac, 1, "Aspect ratio C.");
-DEFINE_string(data_name, "./data/demo1", "The name of datasets.");
+DEFINE_int32(ar, 4, "Aspect ratio R.");
+DEFINE_int32(ac, 4, "Aspect ratio C.");
+DEFINE_string(data_name, "./data/demo4", "The name of datasets.");
 
 DEFINE_int32(l1_size, 4, "The size of L1 Cache for all PE cluster (in MB).");
 DEFINE_int32(l2_size, 8, "The size of L2 (in MB).");
+DEFINE_int32(w, 3, "The sliding window size along columns of adj.");
 DEFINE_string(type, "b","(b)gcnax OR (w)wegnn");
 
 int main(int argc, char *argv[])
@@ -28,14 +29,11 @@ int main(int argc, char *argv[])
   std::shared_ptr<Graph> adj_csr = std::make_shared<Graph>(FLAGS_data_name);  
   adj_csr->print_data();
  
-  /* 
-  std::shared_ptr<Acc> acc = std::make_shared<Acc>((int)option.get("l2_size"),\
-              (int)option.get("l1_size"),(int)option.get("pe_counts"),\
-              (int)option.get("ar"),\
-              (int)option.get("ac"));
-  
-  Analysis res(acc,adj_csr);
-    */
+   
+  std::shared_ptr<Acc> acc = std::make_shared<Acc>(FLAGS_l2_size,FLAGS_l1_size,\
+          FLAGS_pe_counts,FLAGS_ar,FLAGS_ac);
+  Analysis<char> res(acc,adj_csr,FLAGS_w);
+  res.val();
   /*
   std::string my_kernel((std::string)option.get("type"));
   if(!my_kernel.compare("w")){

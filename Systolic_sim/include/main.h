@@ -17,6 +17,6 @@
 //#include "OptionParser.h"
 #include <gflags/gflags.h> 
 #include "graphdata.h"
-//#include "acc.h"
-//#include "analysis.h"
+#include "acc.h"
+#include "analysis.h"
 #endif /* _MAIN_H_ */
