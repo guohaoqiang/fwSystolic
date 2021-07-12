@@ -57,15 +57,21 @@ class Analysis{
 
       //std::vector<std::vector<int>> tile(2,std::vector<int>()); //only record row and column indices
       
-      void to_binary(T n);
-      void print_binary(std::vector<T> &bitmap);
-      void tab_gen(const std::vector<std::vector<int>> &intile, std::vector<T> &d);
+      void to_binary(int n);
+      void print_binary(std::vector<int> &bitmap);
+      void tab_gen(const std::shared_ptr<std::vector<std::shared_ptr<std::vector<std::vector<int>>>>> &intile, std::vector<int> &d);
       void val();
 };
 
 template<typename T>
-void Analysis<T>::to_binary(T n){
-    T a = n % 2;
+Analysis<T>::Analysis(std::shared_ptr<Acc> accelerator,\
+        std::shared_ptr<Graph> input_data, int win):\
+        hw(accelerator),dat(input_data),window(win){
+}  
+
+template<typename T>
+void Analysis<T>::to_binary(int n){
+    int a = n % 2;
     n = n >> 1;
     if(n != 0){
         to_binary(n);
@@ -74,7 +80,7 @@ void Analysis<T>::to_binary(T n){
 }
 
 template<typename T>
-void Analysis<T>::print_binary(std::vector<T> &bitmap){
+void Analysis<T>::print_binary(std::vector<int> &bitmap){
     for(auto item:bitmap){
         to_binary(item);
         std::cout<<std::endl;
@@ -82,23 +88,23 @@ void Analysis<T>::print_binary(std::vector<T> &bitmap){
 }
 
 template<typename T>
-void Analysis<T>::tab_gen(const std::vector<std::vector<int>> &intile, std::vector<T> &d){
+void Analysis<T>::tab_gen(const std::shared_ptr<std::vector<std::shared_ptr<std::vector<std::vector<int>>>>> &intile, \
+        std::vector<int> &d){
     int base = 0;
-    for(size_t i=1; i<intile.at(0).size(); i++){ //rows of in tile 
-        for(size_t j=0; j<intile.at(0).at(i)-intile.at(0).at(i-1); j++){
-            unsigned int shifts = intile.at(1).at(j+base)%hw->ar;
-            d.at(i-1) |= (1<<shifts);
+    for(size_t i=0; i<intile->size(); i++){ //#rows in a tile 
+        VLOG(2)<<"#rows = "<<intile->size();
+        for(size_t j=0; j<intile->at(i)->size(); j++){ //NNZ in the i-th row
+            VLOG(2)<<"#NZ in the "<<j<<"-th row "<<"="<<intile->at(i)->size();
+            unsigned int shifts = intile->at(i)->at(j).at(1)%hw->ar;
+            //std::cout<<shifts<<std::endl;
+            d.at(i) = d.at(i) | (1<<(hw->ar-shifts-1));
+            std::cout<<d.at(i)<<std::endl;
         }
-        base += intile.at(0).at(i)-intile.at(0).at(i-1);
     }
+    VLOG(2)<<"Print binary map:";
     print_binary(d);
 }
 
-template<typename T>
-Analysis<T>::Analysis(std::shared_ptr<Acc> accelerator,\
-        std::shared_ptr<Graph> input_data, int win):\
-        hw(accelerator),dat(input_data),window(win){
-}  
 
 template<typename T>
 void Analysis<T>::print(){
@@ -120,9 +126,10 @@ void Analysis<T>::val(){
     std::vector<int> mark(hw->ar,0);
     std::vector<int> count(hw->ar,0);
     //the inner most vector denotes an non-zero entry <row,col,val>
+
     std::shared_ptr<std::vector<std::shared_ptr<std::vector<std::vector<int>>>>> tile = \
           std::make_shared<std::vector<std::shared_ptr<std::vector<std::vector<int>>>>>(); 
-
+    
     for(size_t i=base; i<dat->data.at(0).size(); i += hw->ar){ // iterate over col-tiles
         for(size_t j=i; j<std::min(i+hw->ar,dat->data.at(0).size()-1); j++){ // iterate over cols in a col-tile
             mark.at(j%hw->ar) = dat->data.at(0).at(j);
@@ -148,14 +155,18 @@ void Analysis<T>::val(){
                         count.at(j%hw->ar)++;
                         if(count.at(j%hw->ar)<(dat->data.at(0).at(j+1) - dat->data.at(0).at(j)))
                             mark.at(j%hw->ar)++;
-                        //VLOG(2)<<"k2 = "<<k2<<" j = "<<j<<" r="<<tmp_entry.at(0)<<" c="<<tmp_entry.at(1)<<" v="<<tmp_entry.at(2);
+                        VLOG(2)<<"k2 = "<<k2<<" j = "<<j<<" r="<<tmp_entry.at(0)<<" c="<<tmp_entry.at(1)<<" v="<<tmp_entry.at(2);
                    }
                 } //end fetch one row of a tile
                 std::cout<<std::endl;
                 tile->push_back(tmp_tile_row);
             }// end fetch one tile 
             //std::cout<<"-----------"<<std::endl; 
-
+            std::vector<int> bits(window,0); 
+            //for(auto g:bits)
+            //    std::cout<<g<<std::endl;
+            tab_gen(tile,bits);
+            return;
         }
     }
 }
