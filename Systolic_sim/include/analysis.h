@@ -60,7 +60,12 @@ class Analysis{
       void to_binary(int n);
       void print_binary(std::vector<int> &bitmap);
       void tab_gen(const std::shared_ptr<std::vector<std::shared_ptr<std::vector<std::vector<int>>>>> &intile, std::vector<int> &d);
+
+      unsigned int find_nz_pos(int n);
+      unsigned int count_nnz(int n, unsigned int pos);
       void val();
+      std::vector<unsigned int> self_loop;
+      std::shared_ptr<std::vector<std::vector<unsigned int>>> tab = std::make_shared<std::vector<std::vector<unsigned int>>>();
 };
 
 template<typename T>
@@ -88,6 +93,36 @@ void Analysis<T>::print_binary(std::vector<int> &bitmap){
 }
 
 template<typename T>
+unsigned int Analysis<T>::find_nz_pos(int n){
+    unsigned int nz_pos;
+    int temp = n;
+    for(size_t p=0; p<hw->ar; p++){
+        if(temp & 1 != 1){
+            temp = n>>1;
+        }else{
+            nz_pos = p;
+        }
+    }
+    return nz_pos;
+}
+template<typename T>
+unsigned int Analysis<T>::count_nnz(int n, unsigned int pos){ // #Non-zero entries previous the position "pos" (inclusive)
+    if(pos>=hw->ar)
+        LOG(FATAL)<<"Un...wrong non-zeron position"<<std::endl;
+    else{
+        size_t s = 0;
+        unsigned int counts = 0;
+        int temp = n;
+        do{
+            if(temp & 1 == 1)
+                counts++;
+            temp = temp>>1;
+            s++;
+        }while(s<=pos);
+        return counts; // right most bit pos has count 1
+    }
+}
+template<typename T>
 void Analysis<T>::tab_gen(const std::shared_ptr<std::vector<std::shared_ptr<std::vector<std::vector<int>>>>> &intile, \
         std::vector<int> &d){
     int base = 0;
@@ -97,12 +132,40 @@ void Analysis<T>::tab_gen(const std::shared_ptr<std::vector<std::shared_ptr<std:
             VLOG(2)<<"#NZ in the "<<j<<"-th row "<<"="<<intile->at(i)->size();
             unsigned int shifts = intile->at(i)->at(j).at(1)%hw->ar;
             //std::cout<<shifts<<std::endl;
-            d.at(i) = d.at(i) | (1<<(hw->ar-shifts-1));
+            d.at(i) = d.at(i) | (1<<(hw->ar-shifts-1)); //convert non-zero entries in a row to a bit-line
             std::cout<<d.at(i)<<std::endl;
         }
     }
     VLOG(2)<<"Print binary map:";
     print_binary(d);
+    for(size_t m = 0; m<d.size(); m++){
+        unsigned int f_nz_pos = find_nz_pos(d.at(m));
+        self_loop.push_back(count_nnz(d.at(m),hw->ar-1));
+        std::vector<unsigned int> sub_tab;
+        for(size_t n = 0; n<d.size(); n++){
+            if(m!=n){
+                unsigned int s_nz_pos = find_nz_pos(d.at(n));
+                int diff = d.at(m) & d.at(n);
+                unsigned int diff_pos = find_nz_pos(diff);  // the first position that both have non-zero entries.
+                if(diff_pos>f_nz_pos){
+                    sub_tab.push_back(count_nnz(d.at(n),f_nz_pos));
+                    //tab.at(m).at(n) = count_nnz(d.at(n),f_nz_pos);
+                }else if(diff_pos == f_nz_pos){
+                    sub_tab.push_back(1);
+                    //tab.at(m).at(n) = 1;
+                }else{
+                    LOG(FATAL)<<"Un...wrong non-zeron position"<<std::endl;
+                }
+            }else{
+                sub_tab.push_back(0);
+                //tab.at(m).at(n) = 0;
+            }
+            VLOG(2)<<"sub_tab length: "<<sub_tab.size()<<" sub_tab: "<<sub_tab.at(sub_tab.size()-1);
+            //return;
+        }
+        tab->push_back(sub_tab);
+    
+    }
 }
 
 
@@ -166,6 +229,7 @@ void Analysis<T>::val(){
             //for(auto g:bits)
             //    std::cout<<g<<std::endl;
             tab_gen(tile,bits);
+            print_binary(bits);
             return;
         }
     }
