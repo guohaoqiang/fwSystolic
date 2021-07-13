@@ -3,11 +3,11 @@
 DEFINE_int32(pe_counts, 16, "Total number of PEs. n == r * c");
 DEFINE_int32(ar, 4, "Aspect ratio R.");
 DEFINE_int32(ac, 4, "Aspect ratio C.");
-DEFINE_string(data_name, "./data/demo4", "The name of datasets.");
+DEFINE_string(data_name, "./data/demo5", "The name of datasets.");
 
 DEFINE_int32(l1_size, 4, "The size of L1 Cache for all PE cluster (in MB).");
 DEFINE_int32(l2_size, 8, "The size of L2 (in MB).");
-DEFINE_int32(w, 3, "The sliding window size along columns of adj.");
+DEFINE_int32(w, 4, "The sliding window size along columns of adj.");
 DEFINE_string(type, "b","(b)gcnax OR (w)wegnn");
 
 int main(int argc, char *argv[])

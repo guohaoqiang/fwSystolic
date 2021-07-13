@@ -94,19 +94,30 @@ void Analysis<T>::print_binary(std::vector<int> &bitmap){
 
 template<typename T>
 unsigned int Analysis<T>::find_nz_pos(int n){
-    unsigned int nz_pos;
+// 0000 0000     return hw->ar
+// 0000 0001     return 0
+// 0001 0010     return 1
+    unsigned int nz_pos = hw->ar;
     int temp = n;
     for(size_t p=0; p<hw->ar; p++){
-        if(temp & 1 != 1){
+        //VLOG(2)<<"temp = "<<temp;
+        //VLOG(2)<<"temp&1 = "<<(temp & 1);
+        if((temp & 1) != 1){
             temp = n>>1;
+            //VLOG(2)<<"temp = "<<temp;
         }else{
             nz_pos = p;
+            //VLOG(2)<<"nz_pos = "<<nz_pos;
+            break;
         }
     }
     return nz_pos;
 }
 template<typename T>
 unsigned int Analysis<T>::count_nnz(int n, unsigned int pos){ // #Non-zero entries previous the position "pos" (inclusive)
+//0000 1000 pos:2    return 0
+//0000 1000 pos:3    return 1
+//1001 0100 pos:hw->ar-1    return 3
     if(pos>=hw->ar)
         LOG(FATAL)<<"Un...wrong non-zeron position"<<std::endl;
     else{
@@ -145,14 +156,23 @@ void Analysis<T>::tab_gen(const std::shared_ptr<std::vector<std::shared_ptr<std:
         for(size_t n = 0; n<d.size(); n++){
             if(m!=n){
                 unsigned int s_nz_pos = find_nz_pos(d.at(n));
+                //VLOG(2)<<"d.at("<<m<<")="<<d.at(m)<<", d.at("<<n<<")="<<d.at(n);
                 int diff = d.at(m) & d.at(n);
+                //VLOG(2)<<"d.at(m)&d.at(n)="<<(d.at(m)&d.at(n))<<", diff="<<diff;
                 unsigned int diff_pos = find_nz_pos(diff);  // the first position that both have non-zero entries.
-                if(diff_pos>f_nz_pos){
+                //return;
+                //VLOG(2)<<"find_nz_pos(diff)="<<find_nz_pos(diff)<<", diff_pos="<<diff_pos;
+                if(diff_pos>=f_nz_pos && diff_pos<hw->ar){
                     sub_tab.push_back(count_nnz(d.at(n),f_nz_pos));
+                    std::cout<<d.at(n)<<","<<f_nz_pos<<","<<count_nnz(d.at(n),f_nz_pos)<<std::endl;
                     //tab.at(m).at(n) = count_nnz(d.at(n),f_nz_pos);
-                }else if(diff_pos == f_nz_pos){
-                    sub_tab.push_back(1);
+                }else if(diff_pos>=f_nz_pos && diff_pos == hw->ar){ // no identical non-zero position
+                    if(count_nnz(d.at(m),hw->ar-1)>=count_nnz(d.at(n),hw->ar-1)){
+                        sub_tab.push_back(0);
+                    }else{
+                        sub_tab.push_back(count_nnz(d.at(n),hw->ar-1) - count_nnz(d.at(m),hw->ar-1));
                     //tab.at(m).at(n) = 1;
+                    }
                 }else{
                     LOG(FATAL)<<"Un...wrong non-zeron position"<<std::endl;
                 }
