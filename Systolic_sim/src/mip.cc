@@ -11,6 +11,7 @@ findsubtour(int      n,
             int*     tourlenP,
             int*     tour)
 {
+  VLOG(2)<<"start tracking the tour...";
   bool* seen = new bool[n];
   int bestind, bestlen;
   int i, node, len, start;
@@ -57,8 +58,10 @@ findsubtour(int      n,
 }
 
 
-int mip(shared_ptr<vector<vector<int>>> &table, shared_ptr<vector<int>> &self_loops){
+int mip(shared_ptr<vector<vector<int>>> &table, \
+        shared_ptr<vector<unsigned int>> &self_loops){
   
+  VLOG(2)<<"start computing mip...";
   int n = 2*table->size();
   int i;
   long mini_delay = 0;
@@ -145,7 +148,7 @@ int mip(shared_ptr<vector<vector<int>>> &table, shared_ptr<vector<int>> &self_lo
       assert(len == n);
 
       cout << "Tour: ";
-      shared_ptr<vector<int>> uni_tour;
+      shared_ptr<vector<int>> uni_tour = make_shared<vector<int>>();
       for (i = 0; i < len; i++){
         cout << tour[i] << " ";
         if(tour[i]<table->size())
@@ -172,10 +175,45 @@ int mip(shared_ptr<vector<vector<int>>> &table, shared_ptr<vector<int>> &self_lo
     delete[] vars[i];
   delete[] vars;
   delete env;
+  VLOG(2)<<"mini_delay = "<<mini_delay;
   return mini_delay;
 }
 
-long comp_delay(shared_ptr<vector<int>> &self_loop,\
+long comp_delay(shared_ptr<vector<unsigned int>> &self_loop,\
         shared_ptr<vector<int>> &uni_tour,\
         shared_ptr<vector<vector<int>>> &table){
+    VLOG(2)<<"start computing delay...";
+    for(size_t u=0;u<uni_tour->size();++u){
+        VLOG(2)<<"u: "<<uni_tour->at(u)<<" self_loop:"<<self_loop->at(u);
+    }
+    long min_mark = FLT_MAX;
+    unsigned int i;
+    unsigned int start_label;
+    int inx_next;
+    int inx_prev;
+    for(i=0;i<uni_tour->size();++i){
+        inx_next = uni_tour->at(i);
+        inx_prev = uni_tour->at((i+uni_tour->size()-1)%uni_tour->size());
+        if((self_loop->at(inx_next) - table->at(inx_prev).at(inx_next))<min_mark){
+            start_label = i;
+            min_mark = (self_loop->at(inx_next) - table->at(inx_prev).at(inx_next));
+        }
+    }
+    long min_delay = self_loop->at(uni_tour->at(start_label));
+    VLOG(2)<<"start: "<<uni_tour->at(start_label);
+    for(size_t j=1;j<uni_tour->size();++j){
+        inx_next = uni_tour->at((start_label+j)%uni_tour->size());
+        inx_prev = uni_tour->at((start_label+j-1)%uni_tour->size());
+        min_delay += table->at(inx_prev).at(inx_next);
+        VLOG(2)<<"Touring:"<<inx_next<<"    dist:"<<min_delay;
+    }
+    return min_delay;
 }
+
+
+
+
+
+
+
+

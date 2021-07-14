@@ -15,7 +15,8 @@ using namespace std;
 
 //double distance(double* x, double* y, int i, int j);
 void findsubtour(int n, double** sol, int* tourlenP, int* tour);
-int mip(shared_ptr<vector<vector<int>>> &table);
+int mip(shared_ptr<vector<vector<int>>> &table, shared_ptr<vector<unsigned int>> &self_loops);
+long comp_delay(shared_ptr<vector<unsigned int>> &self_loop,shared_ptr<vector<int>> &uni_tour,shared_ptr<vector<vector<int>>> &table);
 
 class subtourelim: public GRBCallback
 {

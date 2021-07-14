@@ -67,7 +67,7 @@ class Analysis{
       unsigned int find_nz_pos(int n);
       unsigned int count_nnz(int n, unsigned int pos);
       void val();
-      std::vector<unsigned int> self_loop;
+      std::shared_ptr<std::vector<unsigned int>> self_loop= std::make_shared<std::vector<unsigned int>>();
       std::shared_ptr<std::vector<std::vector<int>>> tab = std::make_shared<std::vector<std::vector<int>>>();
 };
 
@@ -154,7 +154,9 @@ void Analysis<T>::tab_gen(const std::shared_ptr<std::vector<std::shared_ptr<std:
     print_binary(d);
     for(size_t m = 0; m<d.size(); m++){
         unsigned int f_nz_pos = find_nz_pos(d.at(m));
-        self_loop.push_back(count_nnz(d.at(m),hw->ar-1));
+        VLOG(2)<<"";
+        self_loop->push_back(count_nnz(d.at(m),hw->ar-1));
+        VLOG(2)<<"";
         std::vector<int> sub_tab;
         for(size_t n = 0; n<d.size(); n++){
             if(m!=n){
@@ -166,8 +168,11 @@ void Analysis<T>::tab_gen(const std::shared_ptr<std::vector<std::shared_ptr<std:
                 //return;
                 //VLOG(2)<<"find_nz_pos(diff)="<<find_nz_pos(diff)<<", diff_pos="<<diff_pos;
                 if(diff_pos>=f_nz_pos && diff_pos<hw->ar){
-                    sub_tab.push_back(count_nnz(d.at(n),f_nz_pos));
-                    std::cout<<d.at(n)<<","<<f_nz_pos<<","<<count_nnz(d.at(n),f_nz_pos)<<std::endl;
+                    int make_up_0 = count_nnz(d.at(n),hw->ar-1)-count_nnz(d.at(n),diff_pos)\
+                            - (count_nnz(d.at(m),hw->ar-1)-count_nnz(d.at(m),diff_pos)+1);
+                    int make_up = make_up_0>0?make_up_0:0;
+                    sub_tab.push_back(count_nnz(d.at(n),f_nz_pos)+make_up);
+                    VLOG(2)<<d.at(n)<<","<<f_nz_pos<<","<<count_nnz(d.at(n),f_nz_pos)<<std::endl;
                     //tab.at(m).at(n) = count_nnz(d.at(n),f_nz_pos);
                 }else if(diff_pos>=f_nz_pos && diff_pos == hw->ar){ // no identical non-zero position
                     if(count_nnz(d.at(m),hw->ar-1)>=count_nnz(d.at(n),hw->ar-1)){
@@ -254,7 +259,7 @@ void Analysis<T>::val(){
             tab_gen(tile,bits);
             print_binary(bits);
             
-            int one_t_cycs = mip(tab); 
+            int one_t_cycs = mip(tab,self_loop); 
             return;
             //tile.clear();
         }
