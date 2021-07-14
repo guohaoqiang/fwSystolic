@@ -57,10 +57,11 @@ findsubtour(int      n,
 }
 
 
-int mip(shared_ptr<vector<vector<int>>> &table){
+int mip(shared_ptr<vector<vector<int>>> &table, shared_ptr<vector<int>> &self_loops){
   
   int n = 2*table->size();
   int i;
+  long mini_delay = 0;
 
   GRBEnv *env = NULL;
   GRBVar **vars = NULL;
@@ -140,18 +141,24 @@ int mip(shared_ptr<vector<vector<int>>> &table){
       int len;
 
       findsubtour(n, sol, &len, tour);
-      std::cout<<"len = "<<len<<std::endl;
+      //std::cout<<"len = "<<len<<std::endl;
       assert(len == n);
 
       cout << "Tour: ";
-      for (i = 0; i < len; i++)
+      shared_ptr<vector<int>> uni_tour;
+      for (i = 0; i < len; i++){
         cout << tour[i] << " ";
+        if(tour[i]<table->size())
+            uni_tour->push_back(tour[i]);
+      }  
       cout << endl;
 
       for (i = 0; i < n; i++)
         delete[] sol[i];
       delete[] sol;
       delete[] tour;
+
+      mini_delay = comp_delay(self_loops,uni_tour,table);
     }
 
   } catch (GRBException e) {
@@ -165,5 +172,10 @@ int mip(shared_ptr<vector<vector<int>>> &table){
     delete[] vars[i];
   delete[] vars;
   delete env;
-  return 0;
+  return mini_delay;
+}
+
+long comp_delay(shared_ptr<vector<int>> &self_loop,\
+        shared_ptr<vector<int>> &uni_tour,\
+        shared_ptr<vector<vector<int>>> &table){
 }
