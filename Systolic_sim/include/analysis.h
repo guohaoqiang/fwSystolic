@@ -16,6 +16,9 @@
 #include<glog/logging.h>
 #include "acc.h"
 #include "graphdata.h"
+#include "mip.h"
+
+#define _M -FLT_MAX
 template<typename T>
 class Analysis{
     public:
@@ -65,7 +68,7 @@ class Analysis{
       unsigned int count_nnz(int n, unsigned int pos);
       void val();
       std::vector<unsigned int> self_loop;
-      std::shared_ptr<std::vector<std::vector<unsigned int>>> tab = std::make_shared<std::vector<std::vector<unsigned int>>>();
+      std::shared_ptr<std::vector<std::vector<int>>> tab = std::make_shared<std::vector<std::vector<int>>>();
 };
 
 template<typename T>
@@ -152,7 +155,7 @@ void Analysis<T>::tab_gen(const std::shared_ptr<std::vector<std::shared_ptr<std:
     for(size_t m = 0; m<d.size(); m++){
         unsigned int f_nz_pos = find_nz_pos(d.at(m));
         self_loop.push_back(count_nnz(d.at(m),hw->ar-1));
-        std::vector<unsigned int> sub_tab;
+        std::vector<int> sub_tab;
         for(size_t n = 0; n<d.size(); n++){
             if(m!=n){
                 unsigned int s_nz_pos = find_nz_pos(d.at(n));
@@ -177,7 +180,7 @@ void Analysis<T>::tab_gen(const std::shared_ptr<std::vector<std::shared_ptr<std:
                     LOG(FATAL)<<"Un...wrong non-zeron position"<<std::endl;
                 }
             }else{
-                sub_tab.push_back(0);
+                sub_tab.push_back(-FLT_MAX);
                 //tab.at(m).at(n) = 0;
             }
             VLOG(2)<<"sub_tab length: "<<sub_tab.size()<<" sub_tab: "<<sub_tab.at(sub_tab.size()-1);
@@ -250,7 +253,10 @@ void Analysis<T>::val(){
             //    std::cout<<g<<std::endl;
             tab_gen(tile,bits);
             print_binary(bits);
+            
+            int one_t_cycs = mip(tab); 
             return;
+            //tile.clear();
         }
     }
 }
