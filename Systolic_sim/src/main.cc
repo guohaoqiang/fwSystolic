@@ -3,7 +3,7 @@
 DEFINE_int32(pe_counts, 16, "Total number of PEs. n == r * c");
 DEFINE_int32(ar, 4, "Aspect ratio R.");
 DEFINE_int32(ac, 4, "Aspect ratio C.");
-DEFINE_string(data_name, "./data/demo5", "The name of datasets.");
+DEFINE_string(data_name, "./data/demo6", "The name of datasets.");
 
 DEFINE_int32(l1_size, 4, "The size of L1 Cache for all PE cluster (in MB).");
 DEFINE_int32(l2_size, 8, "The size of L2 (in MB).");
@@ -26,8 +26,10 @@ int main(int argc, char *argv[])
   std::shared_ptr<Graph> adj_csr = std::make_shared<Graph>((std::string)option.get("data_name"));  
   */
   gflags::ParseCommandLineFlags(&argc, &argv, true);
+  VLOG(2)<<"Loading data....";
   std::shared_ptr<Graph> adj_csr = std::make_shared<Graph>(FLAGS_data_name);  
-  adj_csr->print_data();
+  VLOG(2)<<"Loading data over....";
+  //adj_csr->print_data();
  
    
   std::shared_ptr<Acc> acc = std::make_shared<Acc>(FLAGS_l2_size,FLAGS_l1_size,\

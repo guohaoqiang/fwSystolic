@@ -147,14 +147,14 @@ int mip(shared_ptr<vector<vector<int>>> &table, \
       //std::cout<<"len = "<<len<<std::endl;
       assert(len == n);
 
-      cout << "Tour: ";
+      //cout << "Tour: ";
       shared_ptr<vector<int>> uni_tour = make_shared<vector<int>>();
       for (i = 0; i < len; i++){
-        cout << tour[i] << " ";
+        //cout << tour[i] << " ";
         if(tour[i]<table->size())
             uni_tour->push_back(tour[i]);
       }  
-      cout << endl;
+      //cout << endl;
 
       for (i = 0; i < n; i++)
         delete[] sol[i];

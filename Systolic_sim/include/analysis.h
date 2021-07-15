@@ -67,8 +67,11 @@ class Analysis{
       unsigned int find_nz_pos(int n);
       unsigned int count_nnz(int n, unsigned int pos);
       void val();
+      void      deconstruct_tab();
+      void      deconstruct_self_loop();
       std::shared_ptr<std::vector<unsigned int>> self_loop= std::make_shared<std::vector<unsigned int>>();
       std::shared_ptr<std::vector<std::vector<int>>> tab = std::make_shared<std::vector<std::vector<int>>>();
+      long  comp_delays = 0; 
 };
 
 template<typename T>
@@ -147,11 +150,11 @@ void Analysis<T>::tab_gen(const std::shared_ptr<std::vector<std::shared_ptr<std:
             unsigned int shifts = intile->at(i)->at(j).at(1)%hw->ar;
             //std::cout<<shifts<<std::endl;
             d.at(i) = d.at(i) | (1<<(hw->ar-shifts-1)); //convert non-zero entries in a row to a bit-line
-            std::cout<<d.at(i)<<std::endl;
+            //std::cout<<d.at(i)<<std::endl;
         }
     }
     VLOG(2)<<"Print binary map:";
-    print_binary(d);
+    //print_binary(d);
     for(size_t m = 0; m<d.size(); m++){
         unsigned int f_nz_pos = find_nz_pos(d.at(m));
         VLOG(2)<<"";
@@ -218,10 +221,9 @@ void Analysis<T>::val(){
     std::vector<int> count(hw->ar,0);
     //the inner most vector denotes an non-zero entry <row,col,val>
 
-    std::shared_ptr<std::vector<std::shared_ptr<std::vector<std::vector<int>>>>> tile = \
-          std::make_shared<std::vector<std::shared_ptr<std::vector<std::vector<int>>>>>(); 
     
-    for(size_t i=base; i<dat->data.at(0).size(); i += hw->ar){ // iterate over col-tiles
+    for(size_t i=base; i<dat->data.at(0).size()-1; i += hw->ar){ // iterate over col-tiles
+        VLOG(2)<<"col tile: "<<i;
         for(size_t j=i; j<std::min(i+hw->ar,dat->data.at(0).size()-1); j++){ // iterate over cols in a col-tile
             mark.at(j%hw->ar) = dat->data.at(0).at(j);
             //VLOG(2)<<"mark["<<j%hw->ar<<"]="<<dat->data.at(0).at(j);
@@ -229,6 +231,9 @@ void Analysis<T>::val(){
         count.assign(hw->ar,0);
         // in adj, #row == #col
         for(size_t k1=0; k1<dat->data.at(0).size()-1; k1 += window){ // iterate over row-tiles
+            VLOG(2)<<"row tile: "<<k1;
+            std::shared_ptr<std::vector<std::shared_ptr<std::vector<std::vector<int>>>>> tile = \
+                                    std::make_shared<std::vector<std::shared_ptr<std::vector<std::vector<int>>>>>(); 
         //for(size_t k1=0; k1<3; k1 += window){ // iterate over row-tiles
             for(size_t k2=k1; k2<std::min(k1+window,dat->data.at(0).size()-1); k2++){
                 std::shared_ptr<std::vector<std::vector<int>>> tmp_tile_row = \
@@ -249,7 +254,7 @@ void Analysis<T>::val(){
                         VLOG(2)<<"k2 = "<<k2<<" j = "<<j<<" r="<<tmp_entry.at(0)<<" c="<<tmp_entry.at(1)<<" v="<<tmp_entry.at(2);
                    }
                 } //end fetch one row of a tile
-                std::cout<<std::endl;
+                //std::cout<<std::endl;
                 tile->push_back(tmp_tile_row);
             }// end fetch one tile 
             //std::cout<<"-----------"<<std::endl; 
@@ -257,13 +262,24 @@ void Analysis<T>::val(){
             //for(auto g:bits)
             //    std::cout<<g<<std::endl;
             tab_gen(tile,bits);
-            print_binary(bits);
+            //print_binary(bits);
             
-            int one_t_cycs = mip(tab,self_loop); 
-            return;
-            //tile.clear();
-        }
-    }
+            comp_delays += mip(tab,self_loop); 
+            deconstruct_tab();
+            deconstruct_self_loop();
+        } // end visiting all row-tiles of a specific col-tile
+    } // end visiting all col-tiles
+    std::cout<<"total delays: "<<comp_delays<<std::endl;
+}
+template<typename T>
+void Analysis<T>::deconstruct_tab(){
+    for(auto i=0;i<tab->size();i++)
+        tab->at(i).clear();
+    tab->clear();
+}
+template<typename T>
+void Analysis<T>::deconstruct_self_loop(){
+    self_loop->clear();
 }
 template<typename T>
 void Analysis<T>::run_wegnn(){
