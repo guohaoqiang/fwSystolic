@@ -35,7 +35,8 @@ int main(int argc, char *argv[])
   std::shared_ptr<Acc> acc = std::make_shared<Acc>(FLAGS_l2_size,FLAGS_l1_size,\
           FLAGS_pe_counts,FLAGS_ar,FLAGS_ac);
   Analysis<char> res(acc,adj_csr,FLAGS_w);
-  res.val();
+  //res.val();
+  res.val_naive1();
   /*
   std::string my_kernel((std::string)option.get("type"));
   if(!my_kernel.compare("w")){
