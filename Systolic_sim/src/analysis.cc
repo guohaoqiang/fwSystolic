@@ -215,7 +215,7 @@ long Analysis::debubbling(const std::shared_ptr<std::vector<std::shared_ptr<std:
     for(size_t l=0;l<hw->ar;++l){
         data_flow_in->push_back(std::make_shared<std::vector<std::vector<int>>>());
     }
-    std::vector<int> sentry(hw->ar,-1); // in the same order with "data_flow_in". Top->Down: 0,1,2,...hw->ar-1
+    std::vector<int> sentry(hw->ar,0); // in the same order with "data_flow_in". Top->Down: 0,1,2,...hw->ar-1
     for(size_t m = 0; m<d.size(); m++){
         VLOG(2)<<"m = "<<m; 
         unsigned int first_y = 0;
@@ -228,25 +228,35 @@ long Analysis::debubbling(const std::shared_ptr<std::vector<std::shared_ptr<std:
         unsigned int first_x = data_flow_in->at(first_y)->size();
         VLOG(2)<<"first_x = "<<first_x<<"   first_y = "<<first_y;
 
-        unsigned int max_x = 0;
-        unsigned int max_y = 0;
+        unsigned int max_x = data_flow_in->at((unsigned)intile->at(m)->at(0).at(1)%hw->ar)->size();
+        unsigned int max_y = (unsigned)intile->at(m)->at(0).at(1)%hw->ar;
         unsigned int max_pos = 0;
         unsigned int nz_indx = 0;
-        for(size_t s=0; s<intile->at(m)->size(); ++s){
+        bool flag = false;
+        for(size_t s=1; s<intile->at(m)->size(); ++s){
             nz_indx = (unsigned)intile->at(m)->at(s).at(1)%hw->ar; //col ID
-            if(data_flow_in->at(nz_indx)->size()>max_x){
+            //VLOG(2)<<"nz_idx="<<nz_indx<<" size="<<data_flow_in->at(nz_indx)->size()<<" max_x="<<max_x;
+            if(data_flow_in->at(nz_indx)->size()>max_x){ //!!! IMPORTANT: no identical sign
                 max_x = data_flow_in->at(nz_indx)->size(); //available position index
                 max_y = nz_indx;
                 max_pos = s;
+            }
+            if(data_flow_in->at(nz_indx)->size() == max_x && !flag){ 
+                max_x = data_flow_in->at(nz_indx)->size(); //available position index
+                max_y = nz_indx;
+                max_pos = s;
+                flag = true;
+                //VLOG(2)<<"s = "<<s;
             }
         }
         VLOG(2)<<"max_x = "<<max_x<<"   max_y = "<<max_y;
    
         std::vector<int> bubble(3,-1); //Placeholder. {row_ID,col_ID,Val} = {-1,-1,-1}.
-        if((max_y-first_y) >= (max_x-first_x)){ //>=45 degree
+        if((max_y-first_y) > (max_x-first_x)){ //>45 degree
             //top->down;
             data_flow_in->at(first_y)->push_back(intile->at(m)->at(0));//push back the first non-zero entry
             sentry.at(first_y)++;
+            VLOG(2)<<" sentry["<<first_y<<"]="<<sentry.at(first_y);
             for(size_t idx=1; idx<intile->at(m)->size();++idx){ //iterate over the remaining non-zero entries in the same row.
                 size_t i_y = intile->at(m)->at(idx).at(1)%hw->ar; //col ID
                 while(sentry.at(i_y)<(sentry.at(first_y)+idx-1)){
@@ -257,9 +267,10 @@ long Analysis::debubbling(const std::shared_ptr<std::vector<std::shared_ptr<std:
                 sentry.at(i_y)++;
                 VLOG(2)<<" sentry["<<i_y<<"]="<<sentry.at(i_y);
             }
-        }else if((max_y-first_y) < (max_x-first_x)){ //<45 degree
+        }else if((max_y-first_y) <= (max_x-first_x)){ //<=45 degree
             data_flow_in->at(max_y)->push_back(intile->at(m)->at(max_pos)); //max_pos in line 232,238
             sentry.at(max_y)++;
+            VLOG(2)<<" sentry["<<max_y<<"]="<<sentry.at(max_y);
             //elements above max_y: down->top
             for(size_t idx=0; idx<max_pos; ++idx){ //iterate over the remaining non-zero entries in the same row.
                 size_t i_y = intile->at(m)->at(idx).at(1)%hw->ar; //col ID
