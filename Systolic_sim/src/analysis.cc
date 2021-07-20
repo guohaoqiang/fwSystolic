@@ -210,40 +210,84 @@ long Analysis::debubbling(const std::shared_ptr<std::vector<std::shared_ptr<std:
     }
     VLOG(2)<<"Print binary map:";
     //print_binary(d);
-    for(size_t m = 0; m<d.size()-1; m++){
-        unsigned int f_nz_pos = find_nz_pos(d.at(m));
-        VLOG(2)<<"";
-        self_loop->push_back(count_nnz(d.at(m),hw->ar-1));
-        VLOG(2)<<"";
-        std::vector<int> sub_tab;
-        size_t n = m + 1;
-        
-        unsigned int s_nz_pos = find_nz_pos(d.at(n));
-        //VLOG(2)<<"d.at("<<m<<")="<<d.at(m)<<", d.at("<<n<<")="<<d.at(n);
-        int diff = d.at(m) & d.at(n);
-        //VLOG(2)<<"d.at(m)&d.at(n)="<<(d.at(m)&d.at(n))<<", diff="<<diff;
-        unsigned int diff_pos = find_nz_pos(diff);  // the first position that both have non-zero entries.
-        //return;
-        //VLOG(2)<<"find_nz_pos(diff)="<<find_nz_pos(diff)<<", diff_pos="<<diff_pos;
-        if(diff_pos>=f_nz_pos && diff_pos<hw->ar){
-            int make_up_0 = count_nnz(d.at(n),hw->ar-1)-count_nnz(d.at(n),diff_pos)\
-                    - (count_nnz(d.at(m),hw->ar-1)-count_nnz(d.at(m),diff_pos)+1);
-            int make_up = make_up_0>0?make_up_0:0;
-            t += (count_nnz(d.at(n),f_nz_pos)+make_up);
-            VLOG(2)<<d.at(n)<<","<<f_nz_pos<<","<<count_nnz(d.at(n),f_nz_pos)<<std::endl;
-            //tab.at(m).at(n) = count_nnz(d.at(n),f_nz_pos);
-        }else if(diff_pos>=f_nz_pos && diff_pos == hw->ar){ // no identical non-zero position
-            if(count_nnz(d.at(m),hw->ar-1)>=count_nnz(d.at(n),hw->ar-1)){
-                t += 0;
-            }else{
-                t += count_nnz(d.at(n),hw->ar-1) - count_nnz(d.at(m),hw->ar-1);
-            //tab.at(m).at(n) = 1;
+    std::shared_ptr<vector<std::shared_ptr<std::vector<std::vector<int>>>>> data_flow_in = \
+                            std::make_shared<vector<std::shared_ptr<std::vector<std::vector<int>>>>>();
+    for(size_t l=0;l<hw->ar;++l){
+        data_flow_in->push_back(std::make_shared<std::vector<std::vector<int>>>());
+    }
+    std::vector<int> sentry(hw->ar,-1); // in the same order with "data_flow_in". Top->Down: 0,1,2,...hw->ar-1
+    for(size_t m = 0; m<d.size(); m++){
+        VLOG(2)<<"m = "<<m; 
+        unsigned int first_y = 0;
+        for(size_t s=0;s<hw->ar;++s){ //"first" here refers to from top to down. reverse to the order of bit representation d
+            if((d.at(m)>>hw->ar-1-s) & 1){ //identical 1
+                first_y = s;
+                break;
             }
-        }else{
-            LOG(FATAL)<<"Un...wrong non-zeron position"<<std::endl;
         }
-        
-        //return;
+        unsigned int first_x = data_flow_in->at(first_y)->size();
+        VLOG(2)<<"first_x = "<<first_x<<"   first_y = "<<first_y;
+
+        unsigned int max_x = 0;
+        unsigned int max_y = 0;
+        unsigned int max_pos = 0;
+        unsigned int nz_indx = 0;
+        for(size_t s=0; s<intile->at(m)->size(); ++s){
+            nz_indx = (unsigned)intile->at(m)->at(s).at(1)%hw->ar; //col ID
+            if(data_flow_in->at(nz_indx)->size()>max_x){
+                max_x = data_flow_in->at(nz_indx)->size(); //available position index
+                max_y = nz_indx;
+                max_pos = s;
+            }
+        }
+        VLOG(2)<<"max_x = "<<max_x<<"   max_y = "<<max_y;
+   
+        std::vector<int> bubble(3,-1); //Placeholder. {row_ID,col_ID,Val} = {-1,-1,-1}.
+        if((max_y-first_y) >= (max_x-first_x)){ //>=45 degree
+            //top->down;
+            data_flow_in->at(first_y)->push_back(intile->at(m)->at(0));//push back the first non-zero entry
+            sentry.at(first_y)++;
+            for(size_t idx=1; idx<intile->at(m)->size();++idx){ //iterate over the remaining non-zero entries in the same row.
+                size_t i_y = intile->at(m)->at(idx).at(1)%hw->ar; //col ID
+                while(sentry.at(i_y)<(sentry.at(first_y)+idx-1)){
+                    data_flow_in->at(i_y)->push_back(bubble);
+                    sentry.at(i_y)++;
+                }
+                data_flow_in->at(i_y)->push_back(intile->at(m)->at(idx));
+                sentry.at(i_y)++;
+                VLOG(2)<<" sentry["<<i_y<<"]="<<sentry.at(i_y);
+            }
+        }else if((max_y-first_y) < (max_x-first_x)){ //<45 degree
+            data_flow_in->at(max_y)->push_back(intile->at(m)->at(max_pos)); //max_pos in line 232,238
+            sentry.at(max_y)++;
+            //elements above max_y: down->top
+            for(size_t idx=0; idx<max_pos; ++idx){ //iterate over the remaining non-zero entries in the same row.
+                size_t i_y = intile->at(m)->at(idx).at(1)%hw->ar; //col ID
+                while(sentry.at(i_y)<(sentry.at(max_y)-max_pos-idx-1)){
+                    data_flow_in->at(i_y)->push_back(bubble);
+                    sentry.at(i_y)++;
+                }
+                data_flow_in->at(i_y)->push_back(intile->at(m)->at(idx));
+                sentry.at(i_y)++;
+                VLOG(2)<<" sentry["<<i_y<<"]="<<sentry.at(i_y);
+            }
+
+            //elements below max_y: top->down
+            for(size_t idx=0; idx<intile->at(m)->size()-max_pos-1;++idx){ //iterate over the remaining non-zero entries in the same row.
+                size_t i_y = intile->at(m)->at(idx+max_pos+1).at(1)%hw->ar; //col ID
+                while(sentry.at(i_y)<(sentry.at(max_y)+idx)){
+                    data_flow_in->at(i_y)->push_back(bubble);
+                    sentry.at(i_y)++;
+                }
+                data_flow_in->at(i_y)->push_back(intile->at(m)->at(idx+max_pos+1));
+                sentry.at(i_y)++;
+                VLOG(2)<<" sentry["<<i_y<<"]="<<sentry.at(i_y);
+            }
+        }
+        for(auto p:(*data_flow_in)){
+            if(p->size()>t)
+                t = p->size();
+        }
         VLOG(2)<<"t: "<<t;
     
     }
@@ -298,7 +342,7 @@ void Analysis::val_naive1(){
        
         // baseline w/o mip
         comp_delays += debubbling(tile,bits); 
-        comp_delays += self_loop->at(0);
+        //comp_delays += self_loop->at(0);
         deconstruct_tab();
         deconstruct_self_loop();
     } // end visiting all col-tiles
@@ -340,4 +384,3 @@ void Analysis::run_baseline(){
     VLOG(0)<<"Dataset: "<<dat->name<<"-"<<dat->nodes<<","<<dat->feature_size<<","<<dat->hiden;
 
 }
-#endif /* _ANALYSIS_H_ */

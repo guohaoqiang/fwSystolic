@@ -72,7 +72,8 @@ class Analysis{
       std::shared_ptr<std::vector<std::vector<int>>> tab = std::make_shared<std::vector<std::vector<int>>>();
       long  comp_delays = 0; 
 
+      std::vector<unsigned int> shortcut_steps;
       long debubbling(const std::shared_ptr<std::vector<std::shared_ptr<std::vector<std::vector<int>>>>> &intile, std::vector<TYPE_LENGTH> &d);
       void val_naive1();// w/o MIP. Verifying the efficiency of MIP.
 };
-
+#endif /* _ANALYSIS_H_ */
