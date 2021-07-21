@@ -195,16 +195,17 @@ void Analysis::val(){
 }
 
 long Analysis::debubbling(const std::shared_ptr<std::vector<std::shared_ptr<std::vector<std::vector<int>>>>> &intile, \
-        std::vector<TYPE_LENGTH> &d){
+        std::shared_ptr<std::vector<TYPE_LENGTH>> &d){
     int base = 0;
     long t = 0;
     for(size_t i=0; i<intile->size(); i++){ //#rows in a tile 
-        VLOG(2)<<"#rows = "<<intile->size();
+//        VLOG(2)<<"#rows = "<<intile->size();
+        d->push_back(0);
         for(size_t j=0; j<intile->at(i)->size(); j++){ //NNZ in the i-th row
-            VLOG(2)<<"#NZ in the "<<j<<"-th row "<<"="<<intile->at(i)->size();
+            VLOG(2)<<"#NZ in the "<<i<<"-th row "<<"="<<intile->at(i)->size();
             unsigned int shifts = intile->at(i)->at(j).at(1)%hw->ar;
             //std::cout<<shifts<<std::endl;
-            d.at(i) = d.at(i) | (1<<(hw->ar-shifts-1)); //convert non-zero entries in a row to a bit-line
+            d->at(i) = d->at(i) | (1<<(hw->ar-shifts-1)); //convert non-zero entries in a row to a bit-line
             //std::cout<<d.at(i)<<std::endl;
         }
     }
@@ -216,11 +217,11 @@ long Analysis::debubbling(const std::shared_ptr<std::vector<std::shared_ptr<std:
         data_flow_in->push_back(std::make_shared<std::vector<std::vector<int>>>());
     }
     std::vector<int> sentry(hw->ar,0); // in the same order with "data_flow_in". Top->Down: 0,1,2,...hw->ar-1
-    for(size_t m = 0; m<d.size(); m++){
+    for(size_t m = 0; m<d->size(); m++){
         VLOG(2)<<"m = "<<m; 
         unsigned int first_y = 0;
         for(size_t s=0;s<hw->ar;++s){ //"first" here refers to from top to down. reverse to the order of bit representation d
-            if((d.at(m)>>hw->ar-1-s) & 1){ //identical 1
+            if((d->at(m)>>hw->ar-1-s) & 1){ //identical 1
                 first_y = s;
                 break;
             }
@@ -228,19 +229,21 @@ long Analysis::debubbling(const std::shared_ptr<std::vector<std::shared_ptr<std:
         unsigned int first_x = data_flow_in->at(first_y)->size();
         VLOG(2)<<"first_x = "<<first_x<<"   first_y = "<<first_y;
 
-        unsigned int max_x = data_flow_in->at((unsigned)intile->at(m)->at(0).at(1)%hw->ar)->size();
+        VLOG(2)<<"intile.size = "<<intile->size()<<"   (m).size() = "<<intile->at(m)->size();
         unsigned int max_y = (unsigned)intile->at(m)->at(0).at(1)%hw->ar;
+        unsigned int max_x = data_flow_in->at((unsigned)intile->at(m)->at(0).at(1)%hw->ar)->size();
         unsigned int max_pos = 0;
         unsigned int nz_indx = 0;
         bool flag = false;
         for(size_t s=1; s<intile->at(m)->size(); ++s){
             nz_indx = (unsigned)intile->at(m)->at(s).at(1)%hw->ar; //col ID
-            //VLOG(2)<<"nz_idx="<<nz_indx<<" size="<<data_flow_in->at(nz_indx)->size()<<" max_x="<<max_x;
+            VLOG(2)<<"nz_idx="<<nz_indx<<" size="<<data_flow_in->at(nz_indx)->size()<<" max_x="<<max_x;
             if(data_flow_in->at(nz_indx)->size()>max_x){ //!!! IMPORTANT: no identical sign
                 max_x = data_flow_in->at(nz_indx)->size(); //available position index
                 max_y = nz_indx;
                 max_pos = s;
             }
+            VLOG(2)<<"nz_idx="<<nz_indx<<" size="<<data_flow_in->at(nz_indx)->size()<<" max_x="<<max_x;
             if(data_flow_in->at(nz_indx)->size() == max_x && !flag){ 
                 max_x = data_flow_in->at(nz_indx)->size(); //available position index
                 max_y = nz_indx;
@@ -267,14 +270,18 @@ long Analysis::debubbling(const std::shared_ptr<std::vector<std::shared_ptr<std:
                 sentry.at(i_y)++;
                 VLOG(2)<<" sentry["<<i_y<<"]="<<sentry.at(i_y);
             }
+            VLOG(2)<<"";
         }else if((max_y-first_y) <= (max_x-first_x)){ //<=45 degree
             data_flow_in->at(max_y)->push_back(intile->at(m)->at(max_pos)); //max_pos in line 232,238
             sentry.at(max_y)++;
             VLOG(2)<<" sentry["<<max_y<<"]="<<sentry.at(max_y);
             //elements above max_y: down->top
             for(size_t idx=0; idx<max_pos; ++idx){ //iterate over the remaining non-zero entries in the same row.
+                VLOG(2)<<"";
                 size_t i_y = intile->at(m)->at(idx).at(1)%hw->ar; //col ID
-                while(sentry.at(i_y)<(sentry.at(max_y)-max_pos-idx-1)){
+                VLOG(2)<<" sentry["<<i_y<<"]="<<sentry.at(i_y);
+                VLOG(2)<<" sentry["<<max_y<<"]="<<sentry.at(max_y)<<" max_pos = "<<max_pos<<" idx = "<<idx;
+                while(sentry.at(i_y)<(sentry.at(max_y)-idx-1)){
                     data_flow_in->at(i_y)->push_back(bubble);
                     sentry.at(i_y)++;
                 }
@@ -284,6 +291,7 @@ long Analysis::debubbling(const std::shared_ptr<std::vector<std::shared_ptr<std:
             }
 
             //elements below max_y: top->down
+            VLOG(2)<<"";
             for(size_t idx=0; idx<intile->at(m)->size()-max_pos-1;++idx){ //iterate over the remaining non-zero entries in the same row.
                 size_t i_y = intile->at(m)->at(idx+max_pos+1).at(1)%hw->ar; //col ID
                 while(sentry.at(i_y)<(sentry.at(max_y)+idx)){
@@ -294,6 +302,7 @@ long Analysis::debubbling(const std::shared_ptr<std::vector<std::shared_ptr<std:
                 sentry.at(i_y)++;
                 VLOG(2)<<" sentry["<<i_y<<"]="<<sentry.at(i_y);
             }
+            VLOG(2)<<"";
         }
         for(auto p:(*data_flow_in)){
             if(p->size()>t)
@@ -343,10 +352,11 @@ void Analysis::val_naive1(){
                }
             } //end fetch one row of a tile
             //std::cout<<std::endl;
-            tile->push_back(tmp_tile_row);
+            if(tmp_tile_row->size() != 0)
+                tile->push_back(tmp_tile_row);
         }// end fetch one tile 
         //std::cout<<"-----------"<<std::endl; 
-        std::vector<TYPE_LENGTH> bits(dat->data.at(0).size()-1,0); 
+        std::shared_ptr<std::vector<TYPE_LENGTH>> bits = std::make_shared<std::vector<TYPE_LENGTH>>(); 
         //for(auto g:bits)
         //    std::cout<<g<<std::endl;
         //print_binary(bits);

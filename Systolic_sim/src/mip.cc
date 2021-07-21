@@ -199,8 +199,10 @@ long comp_delay(shared_ptr<vector<unsigned int>> &self_loop,\
             min_mark = (self_loop->at(inx_next) - table->at(inx_prev).at(inx_next));
         }
     }
+    
     long min_delay = self_loop->at(uni_tour->at(start_label));
     VLOG(2)<<"start: "<<uni_tour->at(start_label);
+    
     for(size_t j=1;j<uni_tour->size();++j){
         inx_next = uni_tour->at((start_label+j)%uni_tour->size());
         inx_prev = uni_tour->at((start_label+j-1)%uni_tour->size());
