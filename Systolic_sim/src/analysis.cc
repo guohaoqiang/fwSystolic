@@ -6,7 +6,7 @@ Analysis::Analysis(std::shared_ptr<Acc> accelerator,\
 }  
 
 void Analysis::to_binary(TYPE_LENGTH n){
-    int a = n % 2;
+    TYPE_LENGTH a = n % 2;
     n = n >> 1;
     if(n != 0){
         to_binary(n);
@@ -14,8 +14,8 @@ void Analysis::to_binary(TYPE_LENGTH n){
     std::cout<<a;
 }
 
-void Analysis::print_binary(std::vector<TYPE_LENGTH> &bitmap){
-    for(auto item:bitmap){
+void Analysis::print_binary(std::shared_ptr<std::vector<TYPE_LENGTH>> &bitmap){
+    for(auto item:(*bitmap)){
         to_binary(item);
         std::cout<<std::endl;
     }
@@ -63,47 +63,48 @@ unsigned int Analysis::count_nnz(TYPE_LENGTH n, unsigned int pos){ // #Non-zero 
 }
 
 void Analysis::tab_gen(const std::shared_ptr<std::vector<std::shared_ptr<std::vector<std::vector<int>>>>> &intile, \
-        std::vector<TYPE_LENGTH> &d){
+        std::shared_ptr<std::vector<TYPE_LENGTH>> &d){
     int base = 0;
     for(size_t i=0; i<intile->size(); i++){ //#rows in a tile 
         VLOG(2)<<"#rows = "<<intile->size();
+        d->push_back(0);
         for(size_t j=0; j<intile->at(i)->size(); j++){ //NNZ in the i-th row
             VLOG(2)<<"#NZ in the "<<j<<"-th row "<<"="<<intile->at(i)->size();
             unsigned int shifts = intile->at(i)->at(j).at(1)%hw->ar;
             //std::cout<<shifts<<std::endl;
-            d.at(i) = d.at(i) | (1<<(hw->ar-shifts-1)); //convert non-zero entries in a row to a bit-line
+            d->at(i) = d->at(i) | (1<<(hw->ar-shifts-1)); //convert non-zero entries in a row to a bit-line
             //std::cout<<d.at(i)<<std::endl;
         }
     }
     VLOG(2)<<"Print binary map:";
     //print_binary(d);
-    for(size_t m = 0; m<d.size(); m++){
-        unsigned int f_nz_pos = find_nz_pos(d.at(m));
+    for(size_t m = 0; m<d->size(); m++){
+        unsigned int f_nz_pos = find_nz_pos(d->at(m));
         VLOG(2)<<"";
-        self_loop->push_back(count_nnz(d.at(m),hw->ar-1));
+        self_loop->push_back(count_nnz(d->at(m),hw->ar-1));
         VLOG(2)<<"";
         std::vector<int> sub_tab;
-        for(size_t n = 0; n<d.size(); n++){
+        for(size_t n = 0; n<d->size(); n++){
             if(m!=n){
-                unsigned int s_nz_pos = find_nz_pos(d.at(n));
+                unsigned int s_nz_pos = find_nz_pos(d->at(n));
                 //VLOG(2)<<"d.at("<<m<<")="<<d.at(m)<<", d.at("<<n<<")="<<d.at(n);
-                int diff = d.at(m) & d.at(n);
+                int diff = d->at(m) & d->at(n);
                 //VLOG(2)<<"d.at(m)&d.at(n)="<<(d.at(m)&d.at(n))<<", diff="<<diff;
                 unsigned int diff_pos = find_nz_pos(diff);  // the first position that both have non-zero entries.
                 //return;
                 //VLOG(2)<<"find_nz_pos(diff)="<<find_nz_pos(diff)<<", diff_pos="<<diff_pos;
                 if(diff_pos>=f_nz_pos && diff_pos<hw->ar){
-                    int make_up_0 = count_nnz(d.at(n),hw->ar-1)-count_nnz(d.at(n),diff_pos)\
-                            - (count_nnz(d.at(m),hw->ar-1)-count_nnz(d.at(m),diff_pos)+1);
+                    int make_up_0 = count_nnz(d->at(n),hw->ar-1)-count_nnz(d->at(n),diff_pos)\
+                            - (count_nnz(d->at(m),hw->ar-1)-count_nnz(d->at(m),diff_pos)+1);
                     int make_up = make_up_0>0?make_up_0:0;
-                    sub_tab.push_back(count_nnz(d.at(n),f_nz_pos)+make_up);
-                    VLOG(2)<<d.at(n)<<","<<f_nz_pos<<","<<count_nnz(d.at(n),f_nz_pos)<<std::endl;
+                    sub_tab.push_back(count_nnz(d->at(n),f_nz_pos)+make_up);
+                    VLOG(2)<<d->at(n)<<","<<f_nz_pos<<","<<count_nnz(d->at(n),f_nz_pos)<<std::endl;
                     //tab.at(m).at(n) = count_nnz(d.at(n),f_nz_pos);
                 }else if(diff_pos>=f_nz_pos && diff_pos == hw->ar){ // no identical non-zero position
-                    if(count_nnz(d.at(m),hw->ar-1)>=count_nnz(d.at(n),hw->ar-1)){
+                    if(count_nnz(d->at(m),hw->ar-1)>=count_nnz(d->at(n),hw->ar-1)){
                         sub_tab.push_back(0);
                     }else{
-                        sub_tab.push_back(count_nnz(d.at(n),hw->ar-1) - count_nnz(d.at(m),hw->ar-1));
+                        sub_tab.push_back(count_nnz(d->at(n),hw->ar-1) - count_nnz(d->at(m),hw->ar-1));
                     //tab.at(m).at(n) = 1;
                     }
                 }else{
@@ -176,23 +177,68 @@ void Analysis::val(){
                    }
                 } //end fetch one row of a tile
                 //std::cout<<std::endl;
-                tile->push_back(tmp_tile_row);
+                if(tmp_tile_row->size() != 0)
+                    tile->push_back(tmp_tile_row);
             }// end fetch one tile 
             //std::cout<<"-----------"<<std::endl; 
-            std::vector<TYPE_LENGTH> bits(window,0); 
+            std::shared_ptr<std::vector<TYPE_LENGTH>> bits = std::make_shared<std::vector<TYPE_LENGTH>>(); 
             //for(auto g:bits)
             //    std::cout<<g<<std::endl;
             tab_gen(tile,bits);
             //print_binary(bits);
            
             // LinDA w/ mip 
-            comp_delays += mip(tab,self_loop); 
+            std::shared_ptr<std::vector<int>> uni_path = mip(tab,self_loop); 
+
+            permutate(tile,uni_path);    
+            //print_tile(tile);
+           
+            bits->clear(); 
+            
+            comp_delays += debubbling(tile,bits);
+
             deconstruct_tab();
             deconstruct_self_loop();
         } // end visiting all row-tiles of a specific col-tile
     } // end visiting all col-tiles
     std::cout<<"total delays: "<<comp_delays<<std::endl;
 }
+void Analysis::print_tile(const std::shared_ptr<std::vector<std::shared_ptr<std::vector<std::vector<int>>>>> &intile){
+    for(auto row:(*intile)){
+        for(auto entry:(*row)){
+            std::cout<<"r = "<<entry.at(0)<<"c = "<<entry.at(1)<<"val = "<<entry.at(2);
+            std::cout<<std::endl;
+        }
+        std::cout<<std::endl;
+    }
+    std::cout<<std::endl;
+}
+
+
+void Analysis::permutate(std::shared_ptr<std::vector<std::shared_ptr<std::vector<std::vector<int>>>>> &intile,\
+        std::shared_ptr<std::vector<int>> &vec){
+    assert(intile->size() == vec->size());
+            
+    for( size_t vv = 0; vv < intile->size() - 1; ++vv )
+    {
+            if (vec->at(vv) == vv)
+            {
+                continue;
+            }
+            size_t oo;
+            for(oo = vv + 1; oo <vec->size(); ++oo)
+            {
+                if (vec->at(oo) == vv)
+                {
+                    break;
+                }
+            }
+            std::iter_swap(intile->begin()+vv, intile->begin()+vec->at(vv) );
+            std::iter_swap(vec->begin()+vv, vec->begin()+oo);
+    } 
+}
+
+
 
 long Analysis::debubbling(const std::shared_ptr<std::vector<std::shared_ptr<std::vector<std::vector<int>>>>> &intile, \
         std::shared_ptr<std::vector<TYPE_LENGTH>> &d){
@@ -210,7 +256,7 @@ long Analysis::debubbling(const std::shared_ptr<std::vector<std::shared_ptr<std:
         }
     }
     VLOG(2)<<"Print binary map:";
-    //print_binary(d);
+    print_binary(d);
     std::shared_ptr<vector<std::shared_ptr<std::vector<std::vector<int>>>>> data_flow_in = \
                             std::make_shared<vector<std::shared_ptr<std::vector<std::vector<int>>>>>();
     for(size_t l=0;l<hw->ar;++l){
@@ -262,9 +308,13 @@ long Analysis::debubbling(const std::shared_ptr<std::vector<std::shared_ptr<std:
             VLOG(2)<<" sentry["<<first_y<<"]="<<sentry.at(first_y);
             for(size_t idx=1; idx<intile->at(m)->size();++idx){ //iterate over the remaining non-zero entries in the same row.
                 size_t i_y = intile->at(m)->at(idx).at(1)%hw->ar; //col ID
-                while(sentry.at(i_y)<(sentry.at(first_y)+idx-1)){
+                VLOG(2)<<intile->at(m)->at(idx).at(0)%hw->ar; //col ID
+                VLOG(2)<<" sentry["<<i_y<<"]="<<sentry.at(i_y)<<"<?"<<sentry.at(first_y)+idx-1;
+                VLOG(2)<<" sentry["<<first_y<<"]="<<sentry.at(first_y)<<" idx = "<<idx;
+                while(sentry.at(i_y)<(int)(sentry.at(first_y)+idx-1)){
                     data_flow_in->at(i_y)->push_back(bubble);
                     sentry.at(i_y)++;
+                    //VLOG(2)<<" sentry["<<i_y<<"]="<<sentry.at(i_y)<<" sentry["<<first_y<<"]="<<sentry.at(first_y)<<" idx = "<<idx;
                 }
                 data_flow_in->at(i_y)->push_back(intile->at(m)->at(idx));
                 sentry.at(i_y)++;
@@ -281,7 +331,7 @@ long Analysis::debubbling(const std::shared_ptr<std::vector<std::shared_ptr<std:
                 size_t i_y = intile->at(m)->at(idx).at(1)%hw->ar; //col ID
                 VLOG(2)<<" sentry["<<i_y<<"]="<<sentry.at(i_y);
                 VLOG(2)<<" sentry["<<max_y<<"]="<<sentry.at(max_y)<<" max_pos = "<<max_pos<<" idx = "<<idx;
-                while(sentry.at(i_y)<(sentry.at(max_y)-idx-1)){
+                while(sentry.at(i_y)<std::max((int)(sentry.at(max_y)-idx-1-1),0)){
                     data_flow_in->at(i_y)->push_back(bubble);
                     sentry.at(i_y)++;
                 }

@@ -13,6 +13,7 @@
 #include<cmath>
 #include<set>
 #include<float.h>
+#include<assert.h>
 #include<glog/logging.h>
 #include "acc.h"
 #include "graphdata.h"
@@ -60,12 +61,15 @@ class Analysis{
       //std::vector<std::vector<int>> tile(2,std::vector<int>()); //only record row and column indices
       
       void to_binary(TYPE_LENGTH n);
-      void print_binary(std::vector<TYPE_LENGTH> &bitmap);
-      void tab_gen(const std::shared_ptr<std::vector<std::shared_ptr<std::vector<std::vector<int>>>>> &intile, std::vector<TYPE_LENGTH> &d);
+      void print_binary(std::shared_ptr<std::vector<TYPE_LENGTH>> &bitmap);
+      void tab_gen(const std::shared_ptr<std::vector<std::shared_ptr<std::vector<std::vector<int>>>>> &intile, std::shared_ptr<std::vector<TYPE_LENGTH>> &d);
 
       unsigned int find_nz_pos(TYPE_LENGTH n);
       unsigned int count_nnz(TYPE_LENGTH n, unsigned int pos);
       void val();
+      void permutate(std::shared_ptr<std::vector<std::shared_ptr<std::vector<std::vector<int>>>>> &intile,\
+        std::shared_ptr<std::vector<int>> &vec);
+      void print_tile(const std::shared_ptr<std::vector<std::shared_ptr<std::vector<std::vector<int>>>>> &intile);
       void      deconstruct_tab();
       void      deconstruct_self_loop();
       std::shared_ptr<std::vector<unsigned int>> self_loop= std::make_shared<std::vector<unsigned int>>();
