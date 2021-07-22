@@ -21,12 +21,12 @@ void Analysis::print_binary(std::shared_ptr<std::vector<TYPE_LENGTH>> &bitmap){
     }
 }
 
-unsigned int Analysis::find_nz_pos(TYPE_LENGTH n){ // return the first non-zeri entry's pos (r->l)
+unsigned int Analysis::find_nz_pos(TYPE_LENGTH n){ // return the first non-zero entry's pos (r->l)
 // 0000 0000     return hw->ar
 // 0000 0001     return 0
 // 0001 0010     return 1
     unsigned int nz_pos = hw->ar;
-    int temp = n;
+    TYPE_LENGTH temp = n;
     for(size_t p=0; p<hw->ar; p++){
         //VLOG(2)<<"temp = "<<temp;
         //VLOG(2)<<"temp&1 = "<<(temp & 1);
@@ -242,8 +242,10 @@ void Analysis::permutate(std::shared_ptr<std::vector<std::shared_ptr<std::vector
 
 long Analysis::debubbling(const std::shared_ptr<std::vector<std::shared_ptr<std::vector<std::vector<int>>>>> &intile, \
         std::shared_ptr<std::vector<TYPE_LENGTH>> &d){
+    std::cout<<"start debubbling ... "<<std::endl;
     int base = 0;
     long t = 0;
+  /*  
     for(size_t i=0; i<intile->size(); i++){ //#rows in a tile 
 //        VLOG(2)<<"#rows = "<<intile->size();
         d->push_back(0);
@@ -257,21 +259,24 @@ long Analysis::debubbling(const std::shared_ptr<std::vector<std::shared_ptr<std:
     }
     VLOG(2)<<"Print binary map:";
     print_binary(d);
+   */ 
     std::shared_ptr<vector<std::shared_ptr<std::vector<std::vector<int>>>>> data_flow_in = \
                             std::make_shared<vector<std::shared_ptr<std::vector<std::vector<int>>>>>();
     for(size_t l=0;l<hw->ar;++l){
         data_flow_in->push_back(std::make_shared<std::vector<std::vector<int>>>());
     }
     std::vector<int> sentry(hw->ar,0); // in the same order with "data_flow_in". Top->Down: 0,1,2,...hw->ar-1
-    for(size_t m = 0; m<d->size(); m++){
+    for(size_t m = 0; m<intile->size(); m++){
         VLOG(2)<<"m = "<<m; 
-        unsigned int first_y = 0;
+        unsigned int first_y = intile->at(m)->at(0).at(1)%hw->ar;
+        /*
         for(size_t s=0;s<hw->ar;++s){ //"first" here refers to from top to down. reverse to the order of bit representation d
             if((d->at(m)>>hw->ar-1-s) & 1){ //identical 1
                 first_y = s;
                 break;
             }
         }
+        */
         unsigned int first_x = data_flow_in->at(first_y)->size();
         VLOG(2)<<"first_x = "<<first_x<<"   first_y = "<<first_y;
 
@@ -289,6 +294,7 @@ long Analysis::debubbling(const std::shared_ptr<std::vector<std::shared_ptr<std:
                 max_y = nz_indx;
                 max_pos = s;
             }
+            /*
             VLOG(2)<<"nz_idx="<<nz_indx<<" size="<<data_flow_in->at(nz_indx)->size()<<" max_x="<<max_x;
             if(data_flow_in->at(nz_indx)->size() == max_x && !flag){ 
                 max_x = data_flow_in->at(nz_indx)->size(); //available position index
@@ -297,6 +303,7 @@ long Analysis::debubbling(const std::shared_ptr<std::vector<std::shared_ptr<std:
                 flag = true;
                 //VLOG(2)<<"s = "<<s;
             }
+            */
         }
         VLOG(2)<<"max_x = "<<max_x<<"   max_y = "<<max_y;
    
@@ -331,7 +338,7 @@ long Analysis::debubbling(const std::shared_ptr<std::vector<std::shared_ptr<std:
                 size_t i_y = intile->at(m)->at(idx).at(1)%hw->ar; //col ID
                 VLOG(2)<<" sentry["<<i_y<<"]="<<sentry.at(i_y);
                 VLOG(2)<<" sentry["<<max_y<<"]="<<sentry.at(max_y)<<" max_pos = "<<max_pos<<" idx = "<<idx;
-                while(sentry.at(i_y)<std::max((int)(sentry.at(max_y)-idx-1-1),0)){
+                while(sentry.at(i_y)<std::max((int)(sentry.at(max_y)-(max_pos-idx)-1),0)){
                     data_flow_in->at(i_y)->push_back(bubble);
                     sentry.at(i_y)++;
                 }
@@ -361,6 +368,7 @@ long Analysis::debubbling(const std::shared_ptr<std::vector<std::shared_ptr<std:
         VLOG(2)<<"t: "<<t;
     
     }
+    std::cout<<"end debubbling ... "<<std::endl;
     return t;
 }
 

@@ -1,8 +1,8 @@
 #include "../include/main.h"
 
-DEFINE_int32(pe_counts, 256, "Total number of PEs. n == r * c");
-DEFINE_int32(ar, 16, "Aspect ratio R.");
-DEFINE_int32(ac, 16, "Aspect ratio C.");
+DEFINE_int32(pe_counts, 16, "Total number of PEs. n == r * c");
+DEFINE_int32(ar, 4, "Aspect ratio R.");
+DEFINE_int32(ac, 4, "Aspect ratio C.");
 DEFINE_string(data_name, "./data/demo6", "The name of datasets.");
 
 DEFINE_int32(l1_size, 4, "The size of L1 Cache for all PE cluster (in MB).");
