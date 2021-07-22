@@ -65,6 +65,7 @@ unsigned int Analysis::count_nnz(TYPE_LENGTH n, unsigned int pos){ // #Non-zero 
 void Analysis::tab_gen(const std::shared_ptr<std::vector<std::shared_ptr<std::vector<std::vector<int>>>>> &intile, \
         std::shared_ptr<std::vector<TYPE_LENGTH>> &d){
     int base = 0;
+/*    
     for(size_t i=0; i<intile->size(); i++){ //#rows in a tile 
         VLOG(2)<<"#rows = "<<intile->size();
         d->push_back(0);
@@ -78,35 +79,69 @@ void Analysis::tab_gen(const std::shared_ptr<std::vector<std::shared_ptr<std::ve
     }
     VLOG(2)<<"Print binary map:";
     //print_binary(d);
-    for(size_t m = 0; m<d->size(); m++){
-        unsigned int f_nz_pos = find_nz_pos(d->at(m));
+*/  
+    for(size_t m = 0; m<intile->size(); m++){
+        //unsigned int f_nz_pos = find_nz_pos(d->at(m));
+        unsigned int f_nz_pos = hw->ar - (*(intile->at(m)->end()-1)).at(1)%hw->ar;
         VLOG(2)<<"";
-        self_loop->push_back(count_nnz(d->at(m),hw->ar-1));
+
+        //self_loop->push_back(count_nnz(d->at(m),hw->ar-1));
+        self_loop->push_back(intile->at(m)->size());
+        
         VLOG(2)<<"";
         std::vector<int> sub_tab;
-        for(size_t n = 0; n<d->size(); n++){
+        for(size_t n = 0; n<intile->size(); n++){
             if(m!=n){
-                unsigned int s_nz_pos = find_nz_pos(d->at(n));
+                //unsigned int s_nz_pos = find_nz_pos(d->at(n));
+                unsigned int s_nz_pos = hw->ar - (*(intile->at(n)->end()-1)).at(1)%hw->ar;
                 //VLOG(2)<<"d.at("<<m<<")="<<d.at(m)<<", d.at("<<n<<")="<<d.at(n);
-                int diff = d->at(m) & d->at(n);
+                /*
+                int diff = d->at(m) & d->at(n); 
                 //VLOG(2)<<"d.at(m)&d.at(n)="<<(d.at(m)&d.at(n))<<", diff="<<diff;
                 unsigned int diff_pos = find_nz_pos(diff);  // the first position that both have non-zero entries.
+                */
+                size_t cts_m = 0;
+                size_t cts_n = 0;
+                bool flag = false;
+                unsigned int diff_pos = hw->ar;
+                for(int i=intile->at(m)->size()-1; i>=0; --i){
+                    for(int j=intile->at(n)->size()-1; j>=0; --j){
+                        if(intile->at(m)->at(i).at(1)%hw->ar == intile->at(n)->at(j).at(1)%hw->ar){
+                            cts_m = intile->at(m)->size() - i;
+                            cts_n = intile->at(n)->size() - j;
+                            diff_pos = hw->ar - intile->at(m)->at(i).at(1)%hw->ar - 1;
+                            flag = true;
+                            break;
+                        }
+                    }
+                    if(flag)
+                        break;
+                }
+                
                 //return;
-                //VLOG(2)<<"find_nz_pos(diff)="<<find_nz_pos(diff)<<", diff_pos="<<diff_pos;
-                if(diff_pos>=f_nz_pos && diff_pos<hw->ar){
-                    int make_up_0 = count_nnz(d->at(n),hw->ar-1)-count_nnz(d->at(n),diff_pos)\
+                VLOG(2)<<"diff_pos = "<<diff_pos<<"   f_nz_pos = "<<f_nz_pos;
+                if(cts_n != 0){
+                    //int make_up_0 = count_nnz(d->at(n),hw->ar-1)-count_nnz(d->at(n),diff_pos)\
                             - (count_nnz(d->at(m),hw->ar-1)-count_nnz(d->at(m),diff_pos)+1);
-                    int make_up = make_up_0>0?make_up_0:0;
-                    sub_tab.push_back(count_nnz(d->at(n),f_nz_pos)+make_up);
-                    VLOG(2)<<d->at(n)<<","<<f_nz_pos<<","<<count_nnz(d->at(n),f_nz_pos)<<std::endl;
+                    //int make_up_0 = intile->at(n)->size() - cts_n\
+                            - (intile->at(n)->size() - cts_m + 1)
+
+                    //int make_up = make_up_0>0?make_up_0:0;
+                    
+                    //sub_tab.push_back(count_nnz(d->at(n),f_nz_pos)+make_up);
+                    int opt = intile->at(n)->size() - intile->at(m)->size();
+                    sub_tab.push_back(std::max((int)(cts_n-cts_m+1),opt));
+                    
+                    VLOG(2)<<"m = "<<m<<" n = "<<n<<" , "<<sub_tab.at(sub_tab.size()-1);
                     //tab.at(m).at(n) = count_nnz(d.at(n),f_nz_pos);
-                }else if(diff_pos>=f_nz_pos && diff_pos == hw->ar){ // no identical non-zero position
-                    if(count_nnz(d->at(m),hw->ar-1)>=count_nnz(d->at(n),hw->ar-1)){
+                }else if(cts_n == 0){ // no identical non-zero position
+                    if(intile->at(m)->size()>=intile->at(n)->size()){
                         sub_tab.push_back(0);
                     }else{
-                        sub_tab.push_back(count_nnz(d->at(n),hw->ar-1) - count_nnz(d->at(m),hw->ar-1));
+                        sub_tab.push_back(intile->at(n)->size() - intile->at(m)->size());
                     //tab.at(m).at(n) = 1;
                     }
+                    VLOG(2)<<"m = "<<m<<" n = "<<n<<" , "<<sub_tab.at(sub_tab.size()-1);
                 }else{
                     LOG(FATAL)<<"Un...wrong non-zeron position"<<std::endl;
                 }
