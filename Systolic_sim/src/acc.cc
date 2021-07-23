@@ -9,6 +9,10 @@ Acc::Acc(const int l2_, const int l1_, \
         //l2_support = (int)l2_*1024*1024/4; // word
         ar = aspr_r;
         ac = aspr_c;
+        if(ar<=8)
+            bk = 8;
+        else
+            bk = 32;
         check_pe_total();
         /*
         for(int i=0; i<pec_total; i++){

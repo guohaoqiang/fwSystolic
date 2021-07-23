@@ -3,6 +3,9 @@
 Analysis::Analysis(std::shared_ptr<Acc> accelerator,\
         std::shared_ptr<Graph> input_data, int win):\
         hw(accelerator),dat(input_data),window(win){
+        
+        for(size_t i=0; i<hw->bk; ++i)
+            bk_cts.push_back(0);
 }  
 
 void Analysis::to_binary(TYPE_LENGTH n){
@@ -237,6 +240,19 @@ void Analysis::val(){
         } // end visiting all row-tiles of a specific col-tile
     } // end visiting all col-tiles
     std::cout<<"total delays: "<<comp_delays<<std::endl;
+    
+    long long nnz_total = 0;
+    for(size_t i=0; i<hw->bk; ++i){
+        nnz_total += bk_cts.at(i);
+    }
+    float shannon_entropy = 0;
+    for(size_t i=0; i<hw->bk; ++i){
+        float temp = (float)bk_cts.at(i)/nnz_total;
+        shannon_entropy -= temp*log2(temp)/log2(hw->bk);
+    }
+    std::cout<<"conflicts: "<<conflicts<<std::endl;
+    std::cout<<"shannon entropy: "<<shannon_entropy<<std::endl;
+    
 }
 void Analysis::print_tile(const std::shared_ptr<std::vector<std::shared_ptr<std::vector<std::vector<int>>>>> &intile){
     for(auto row:(*intile)){
@@ -404,6 +420,8 @@ long Analysis::debubbling(const std::shared_ptr<std::vector<std::shared_ptr<std:
     
     }
     std::cout<<"end debubbling ... "<<std::endl;
+    //linda_mem_analysis(data_flow_in);
+    c2sr_mem_analysis(data_flow_in);
     return t;
 }
 
@@ -414,15 +432,15 @@ void Analysis::linda_mem_analysis(const std::shared_ptr<std::vector<std::shared_
             length = p->size();
     }
     long long counts = -1;
-    std::set<long long> bk_sets();
+    std::set<int> bk_sets;
     for(size_t i=0; i<length; ++i){ 
         int nnz = 0;
         for(size_t j=0; j<dataflow_in->size(); ++j){ 
             if(i < dataflow_in->at(j)->size() && dataflow_in->at(j)->at(i).at(0) != -1){
                 counts++;
                 nnz++;
-                bk_sets.insert(counts%hw->ar);
-                bk_cts.at(counts%hw->ar)++;
+                bk_sets.insert(counts%hw->bk);
+                bk_cts.at(counts%hw->bk)++;
             }else{
                 continue;
             }
@@ -452,30 +470,19 @@ void Analysis::c2sr_mem_analysis(const std::shared_ptr<std::vector<std::shared_p
             length = p->size();
     }
     
-    std::set<long long> bk_sets();
+    std::set<int> bk_sets;
     for(size_t i=0; i<length; ++i){ 
         int nnz = 0;
         for(size_t j=0; j<dataflow_in->size(); ++j){ 
-            nnz++;
-            bk_sets.insert(dataflow_in->at(j)->at(i).at(0)%hw->ar);
-            bk_cts.at(dataflow_in->at(j)->at(i).at(0)%hw->ar)++;
+            if(i < dataflow_in->at(j)->size() && dataflow_in->at(j)->at(i).at(0) != -1){
+                nnz++;
+                bk_sets.insert(dataflow_in->at(j)->at(i).at(0)%hw->bk);
+                bk_cts.at(dataflow_in->at(j)->at(i).at(0)%hw->bk)++;
+            }
         }
         conflicts += (nnz - bk_sets.size());
         bk_sets.clear();
     }
-    /*
-    long long nnz_total = 0;
-    for(size_t i=0; i<hw->ar; ++i){
-        nnz_total += bk_cts.at(i);
-    }
-    float shannon_entropy = 0;
-    for(size_t i=0; i<hw->ar; ++i){
-        float temp = (float)bk_cts.at(i)/nnz_total;
-        shannon_entropy += temp*log2(temp);
-    }
-    std::cout<<"conflicts: "<<conflicts<<std::endl;
-    std::cout<<"shannon entropy: "<<shannon_entropy<<std::endl;
-    */
 }
 void Analysis::val_naive1(){
     int base = 0;

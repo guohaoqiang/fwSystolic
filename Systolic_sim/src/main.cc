@@ -36,9 +36,9 @@ int main(int argc, char *argv[])
           FLAGS_pe_counts,FLAGS_ar,FLAGS_ac);
   Analysis res(acc,adj_csr,FLAGS_w);
   //std::cout<<"long long = "<<sizeof(TYPE_LENGTH);
-  //res.val();
+  res.val();
   //res.val_naive1();
-  res.val_naive();
+  //res.val_naive();
   /*
   std::string my_kernel((std::string)option.get("type"));
   if(!my_kernel.compare("w")){

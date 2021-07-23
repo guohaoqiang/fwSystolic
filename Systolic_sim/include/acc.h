@@ -22,6 +22,7 @@ class Acc{
         int pes;
         int ar;
         int ac;
+        int bk;
 
         //int pec_total;
         int pec_size;
