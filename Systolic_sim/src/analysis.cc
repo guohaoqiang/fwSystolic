@@ -407,6 +407,76 @@ long Analysis::debubbling(const std::shared_ptr<std::vector<std::shared_ptr<std:
     return t;
 }
 
+void Analysis::linda_mem_analysis(const std::shared_ptr<std::vector<std::shared_ptr<std::vector<std::vector<int>>>>> &dataflow_in){
+    long long length = 0;
+    for(auto p:(*dataflow_in)){
+        if(p->size()>length)
+            length = p->size();
+    }
+    long long counts = -1;
+    std::set<long long> bk_sets();
+    for(size_t i=0; i<length; ++i){ 
+        int nnz = 0;
+        for(size_t j=0; j<dataflow_in->size(); ++j){ 
+            if(i < dataflow_in->at(j)->size() && dataflow_in->at(j)->at(i).at(0) != -1){
+                counts++;
+                nnz++;
+                bk_sets.insert(counts%hw->ar);
+                bk_cts.at(counts%hw->ar)++;
+            }else{
+                continue;
+            }
+        }
+        conflicts += (nnz-bk_sets.size());
+        bk_sets.clear();
+    }
+    /*
+    long long nnz_total = 0;
+    for(size_t i=0; i<hw->ar; ++i){
+        nnz_total += bk_cts.at(i);
+    }
+    float shannon_entropy = 0;
+    for(size_t i=0; i<hw->ar; ++i){
+        float temp = (float)bk_cts.at(i)/nnz_total;
+        shannon_entropy += temp*log2(temp);
+    }
+    std::cout<<"conflicts: "<<conflicts<<std::endl;
+    std::cout<<"shannon entropy: "<<shannon_entropy<<std::endl;
+    */
+}
+
+void Analysis::c2sr_mem_analysis(const std::shared_ptr<std::vector<std::shared_ptr<std::vector<std::vector<int>>>>> &dataflow_in){
+    long long length = 0;
+    for(auto p:(*dataflow_in)){
+        if(p->size()>length)
+            length = p->size();
+    }
+    
+    std::set<long long> bk_sets();
+    for(size_t i=0; i<length; ++i){ 
+        int nnz = 0;
+        for(size_t j=0; j<dataflow_in->size(); ++j){ 
+            nnz++;
+            bk_sets.insert(dataflow_in->at(j)->at(i).at(0)%hw->ar);
+            bk_cts.at(dataflow_in->at(j)->at(i).at(0)%hw->ar)++;
+        }
+        conflicts += (nnz - bk_sets.size());
+        bk_sets.clear();
+    }
+    /*
+    long long nnz_total = 0;
+    for(size_t i=0; i<hw->ar; ++i){
+        nnz_total += bk_cts.at(i);
+    }
+    float shannon_entropy = 0;
+    for(size_t i=0; i<hw->ar; ++i){
+        float temp = (float)bk_cts.at(i)/nnz_total;
+        shannon_entropy += temp*log2(temp);
+    }
+    std::cout<<"conflicts: "<<conflicts<<std::endl;
+    std::cout<<"shannon entropy: "<<shannon_entropy<<std::endl;
+    */
+}
 void Analysis::val_naive1(){
     int base = 0;
     std::vector<int> mark(hw->ar,0);
