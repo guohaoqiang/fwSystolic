@@ -79,5 +79,6 @@ class Analysis{
       std::vector<unsigned int> shortcut_steps;
       long debubbling(const std::shared_ptr<std::vector<std::shared_ptr<std::vector<std::vector<int>>>>> &intile, std::shared_ptr<std::vector<TYPE_LENGTH>> &d);
       void val_naive1();// w/o MIP. Verifying the efficiency of MIP.
+      void val_naive();// w/o debubbling. Verifying the efficiency of debubbling.
 };
 #endif /* _ANALYSIS_H_ */

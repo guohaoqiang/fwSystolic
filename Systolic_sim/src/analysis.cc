@@ -179,34 +179,34 @@ void Analysis::val(){
     //the inner most vector denotes an non-zero entry <row,col,val>
 
     
-    for(size_t i=base; i<dat->data.at(0).size()-1; i += hw->ar){ // iterate over col-tiles
-        VLOG(2)<<"col tile: "<<i;
-        for(size_t j=i; j<std::min(i+hw->ar,dat->data.at(0).size()-1); j++){ // iterate over cols in a col-tile
-            mark.at(j%hw->ar) = dat->data.at(0).at(j);
+    for(size_t i=base; i<dat->csr_diag.at(0).size()-1; i += hw->ar){ // iterate over col-tiles
+        std::cout<<"col tile: "<<i<<std::endl;
+        for(size_t j=i; j<std::min(i+hw->ar,dat->csr_diag.at(0).size()-1); j++){ // iterate over cols in a col-tile
+            mark.at(j%hw->ar) = dat->csr_diag.at(0).at(j);
             //VLOG(2)<<"mark["<<j%hw->ar<<"]="<<dat->data.at(0).at(j);
         }
         count.assign(hw->ar,0);
         // in adj, #row == #col
-        for(size_t k1=0; k1<dat->data.at(0).size()-1; k1 += window){ // iterate over row-tiles
+        for(size_t k1=0; k1<dat->csr_diag.at(0).size()-1; k1 += window){ // iterate over row-tiles
             VLOG(2)<<"row tile: "<<k1;
             std::shared_ptr<std::vector<std::shared_ptr<std::vector<std::vector<int>>>>> tile = \
                                     std::make_shared<std::vector<std::shared_ptr<std::vector<std::vector<int>>>>>(); 
         //for(size_t k1=0; k1<3; k1 += window){ // iterate over row-tiles
-            for(size_t k2=k1; k2<std::min(k1+window,dat->data.at(0).size()-1); k2++){
+            for(size_t k2=k1; k2<std::min(k1+window,dat->csr_diag.at(0).size()-1); k2++){
                 std::shared_ptr<std::vector<std::vector<int>>> tmp_tile_row = \
                                         std::make_shared<std::vector<std::vector<int>>>();
                 // begin fetch one row of a tile
-                for(size_t j=i; j<std::min(i+hw->ar,dat->data.at(0).size()-1); j++){ // iterate over cols in a col-tile
+                for(size_t j=i; j<std::min(i+hw->ar,dat->csr_diag.at(0).size()-1); j++){ // iterate over cols in a col-tile
                    //std::cout<<"k2 = "<<k2<<" j = "<<j<<std::endl;
                    //VLOG(2)<<"#nz of "<<j<<":"<<dat->data.at(0).at(j+1) - dat->data.at(0).at(j);
-                   if(dat->data.at(1).at(mark.at(j%hw->ar)) == k2){ 
+                   if(dat->csr_diag.at(1).at(mark.at(j%hw->ar)) == k2){ 
                         std::vector<int> tmp_entry(3,0);
-                        tmp_entry.at(0) = dat->data.at(1).at(mark.at(j%hw->ar));//row ID
+                        tmp_entry.at(0) = dat->csr_diag.at(1).at(mark.at(j%hw->ar));//row ID
                         tmp_entry.at(1) = j;//col ID
-                        tmp_entry.at(2) = dat->data.at(2).at(mark.at(j%hw->ar));//vals
+                        tmp_entry.at(2) = dat->csr_diag.at(2).at(mark.at(j%hw->ar));//vals
                         tmp_tile_row->push_back(tmp_entry);
                         count.at(j%hw->ar)++;
-                        if(count.at(j%hw->ar)<(dat->data.at(0).at(j+1) - dat->data.at(0).at(j)))
+                        if(count.at(j%hw->ar)<(dat->csr_diag.at(0).at(j+1) - dat->csr_diag.at(0).at(j)))
                             mark.at(j%hw->ar)++;
                         VLOG(2)<<"k2 = "<<k2<<" j = "<<j<<" r="<<tmp_entry.at(0)<<" c="<<tmp_entry.at(1)<<" v="<<tmp_entry.at(2);
                    }
@@ -414,10 +414,10 @@ void Analysis::val_naive1(){
     //the inner most vector denotes an non-zero entry <row,col,val>
 
     
-    for(size_t i=base; i<dat->data.at(0).size()-1; i += hw->ar){ // iterate over col-tiles
-        VLOG(2)<<"col tile: "<<i;
-        for(size_t j=i; j<std::min(i+hw->ar,dat->data.at(0).size()-1); j++){ // iterate over cols in a col-tile
-            mark.at(j%hw->ar) = dat->data.at(0).at(j);
+    for(size_t i=base; i<dat->csr_diag.at(0).size()-1; i += hw->ar){ // iterate over col-tiles
+        std::cout<<"col tile: "<<i<<std::endl;
+        for(size_t j=i; j<std::min(i+hw->ar,dat->csr_diag.at(0).size()-1); j++){ // iterate over cols in a col-tile
+            mark.at(j%hw->ar) = dat->csr_diag.at(0).at(j);
             //VLOG(2)<<"mark["<<j%hw->ar<<"]="<<dat->data.at(0).at(j);
         }
         count.assign(hw->ar,0);
@@ -425,21 +425,21 @@ void Analysis::val_naive1(){
         std::shared_ptr<std::vector<std::shared_ptr<std::vector<std::vector<int>>>>> tile = \
                                 std::make_shared<std::vector<std::shared_ptr<std::vector<std::vector<int>>>>>(); 
     //for(size_t k1=0; k1<3; k1 += window){ // iterate over row-tiles
-        for(size_t k2=0; k2<dat->data.at(0).size()-1; k2++){
+        for(size_t k2=0; k2<dat->csr_diag.at(0).size()-1; k2++){
             std::shared_ptr<std::vector<std::vector<int>>> tmp_tile_row = \
                                     std::make_shared<std::vector<std::vector<int>>>();
             // begin fetch one row of a tile
-            for(size_t j=i; j<std::min(i+hw->ar,dat->data.at(0).size()-1); j++){ // iterate over cols in a col-tile
+            for(size_t j=i; j<std::min(i+hw->ar,dat->csr_diag.at(0).size()-1); j++){ // iterate over cols in a col-tile
                //std::cout<<"k2 = "<<k2<<" j = "<<j<<std::endl;
                //VLOG(2)<<"#nz of "<<j<<":"<<dat->data.at(0).at(j+1) - dat->data.at(0).at(j);
-               if(dat->data.at(1).at(mark.at(j%hw->ar)) == k2){ 
+               if(dat->csr_diag.at(1).at(mark.at(j%hw->ar)) == k2){ 
                     std::vector<int> tmp_entry(3,0);
-                    tmp_entry.at(0) = dat->data.at(1).at(mark.at(j%hw->ar));//row ID
+                    tmp_entry.at(0) = dat->csr_diag.at(1).at(mark.at(j%hw->ar));//row ID
                     tmp_entry.at(1) = j;//col ID
-                    tmp_entry.at(2) = dat->data.at(2).at(mark.at(j%hw->ar));//vals
+                    tmp_entry.at(2) = dat->csr_diag.at(2).at(mark.at(j%hw->ar));//vals
                     tmp_tile_row->push_back(tmp_entry);
                     count.at(j%hw->ar)++;
-                    if(count.at(j%hw->ar)<(dat->data.at(0).at(j+1) - dat->data.at(0).at(j)))
+                    if(count.at(j%hw->ar)<(dat->csr_diag.at(0).at(j+1) - dat->csr_diag.at(0).at(j)))
                         mark.at(j%hw->ar)++;
                     VLOG(2)<<"k2 = "<<k2<<" j = "<<j<<" r="<<tmp_entry.at(0)<<" c="<<tmp_entry.at(1)<<" v="<<tmp_entry.at(2);
                }
@@ -497,4 +497,59 @@ void Analysis::run_baseline(){
     //VLOG(0)<<"Dataset: "<<dat->name<<"\-"<<dat->nodes<<","<<dat->max_num;
     VLOG(0)<<"Dataset: "<<dat->name<<"-"<<dat->nodes<<","<<dat->feature_size<<","<<dat->hiden;
 
+}
+void Analysis::val_naive(){
+    int base = 0;
+    std::vector<int> mark(hw->ar,0);
+    std::vector<int> count(hw->ar,0);
+    //the inner most vector denotes an non-zero entry <row,col,val>
+
+    
+    for(size_t i=base; i<dat->csr_diag.at(0).size()-1; i += hw->ar){ // iterate over col-tiles
+        std::cout<<"col tile: "<<i<<std::endl;
+        for(size_t j=i; j<std::min(i+hw->ar,dat->csr_diag.at(0).size()-1); j++){ // iterate over cols in a col-tile
+            mark.at(j%hw->ar) = dat->csr_diag.at(0).at(j);
+            //VLOG(2)<<"mark["<<j%hw->ar<<"]="<<dat->data.at(0).at(j);
+        }
+        count.assign(hw->ar,0);
+        // in adj, #row == #col
+        std::shared_ptr<std::vector<std::shared_ptr<std::vector<std::vector<int>>>>> tile = \
+                                std::make_shared<std::vector<std::shared_ptr<std::vector<std::vector<int>>>>>(); 
+    //for(size_t k1=0; k1<3; k1 += window){ // iterate over row-tiles
+        for(size_t k2=0; k2<dat->csr_diag.at(0).size()-1; k2++){
+            std::shared_ptr<std::vector<std::vector<int>>> tmp_tile_row = \
+                                    std::make_shared<std::vector<std::vector<int>>>();
+            // begin fetch one row of a tile
+            for(size_t j=i; j<std::min(i+hw->ar,dat->csr_diag.at(0).size()-1); j++){ // iterate over cols in a col-tile
+               //std::cout<<"k2 = "<<k2<<" j = "<<j<<std::endl;
+               //VLOG(2)<<"#nz of "<<j<<":"<<dat->data.at(0).at(j+1) - dat->data.at(0).at(j);
+               if(dat->csr_diag.at(1).at(mark.at(j%hw->ar)) == k2){ 
+                    std::vector<int> tmp_entry(3,0);
+                    tmp_entry.at(0) = dat->csr_diag.at(1).at(mark.at(j%hw->ar));//row ID
+                    tmp_entry.at(1) = j;//col ID
+                    tmp_entry.at(2) = dat->csr_diag.at(2).at(mark.at(j%hw->ar));//vals
+                    tmp_tile_row->push_back(tmp_entry);
+                    count.at(j%hw->ar)++;
+                    if(count.at(j%hw->ar)<(dat->csr_diag.at(0).at(j+1) - dat->csr_diag.at(0).at(j)))
+                        mark.at(j%hw->ar)++;
+                    VLOG(2)<<"k2 = "<<k2<<" j = "<<j<<" r="<<tmp_entry.at(0)<<" c="<<tmp_entry.at(1)<<" v="<<tmp_entry.at(2);
+               }
+            } //end fetch one row of a tile
+            //std::cout<<std::endl;
+            if(tmp_tile_row->size() != 0)
+                tile->push_back(tmp_tile_row);
+        }// end fetch one tile 
+        //std::cout<<"-----------"<<std::endl; 
+        std::shared_ptr<std::vector<TYPE_LENGTH>> bits = std::make_shared<std::vector<TYPE_LENGTH>>(); 
+        //for(auto g:bits)
+        //    std::cout<<g<<std::endl;
+        //print_binary(bits);
+       
+        // baseline w/o mip
+        comp_delays += tile->size(); 
+        //comp_delays += self_loop->at(0);
+        deconstruct_tab();
+        deconstruct_self_loop();
+    } // end visiting all col-tiles
+    std::cout<<"total delays: "<<comp_delays + hw->ar<<std::endl;
 }
