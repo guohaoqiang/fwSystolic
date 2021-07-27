@@ -63,5 +63,17 @@ class Acc{
         std::vector<unsigned long> dram_read;
         std::vector<unsigned long> dram_write;
 
+        //https://www.intel.com/content/www/us/en/support/articles/000056722/processors/intel-core-processors.html
+        const float dram_bandwidth = 93.86688;// equals 94GB/s = 94B/ns
+        //https://on-demand.gputechconf.com/gtc/2018/presentation/s81006-volta-architecture-and-performance-optimization.pdf
+        float buf_bandwidth;
+
+        const float mac_latency = 2.774; //in ns
+        const float act_latency = 7.546; // in ns
+        const float pe_latency = 2.774;
+        const float mac_power = 5.03362; // in mw
+        const float activation_power = 359.475;
+        const float pe_power = 5.05575;
+
 };
 #endif /* _ACC_H_ */

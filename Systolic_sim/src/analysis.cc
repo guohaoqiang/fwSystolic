@@ -630,3 +630,90 @@ void Analysis::val_naive(){
     } // end visiting all col-tiles
     std::cout<<"total delays: "<<comp_delays + hw->ar<<std::endl;
 }
+void Analysis::timing(){
+    //Stage 1
+    //channel width = 8 Byte, so a load transaction read 4 entries, each of which is 2 Bytes.
+    //row-major
+    float t_stage_load_Col_tile_w = (dat->feature_size*ceiling(hw->ac/4)*8)/hw->dram_bandwidth; //in the units of ns 
+    float t_stage_1 = t_stage_load_Col_tile_w;
+    
+    
+    //Stage 2
+    //channel width = 4 Bytes. An operand is 2 Bytes.
+    float t_load_from_buf_x_one_cycle = ceiling(hw->ar/hw->bk/2)*32*hw->bk/hw->buf_bandwidth;
+    float t_load_from_buf_w_one_cycle = ceiling(hw->ac/hw->bk/2)*32*hw->bk/hw->buf_bandwidth;
+    float t_stage_2 = (dat->featue_size + hw->ar + hw->ac) * \
+            (t_load_from_buf_x_one_cycle > hw->mac_latency ? t_load_from_buf_x_one_cycle : hw->mac_latency); 
+    
+    //Stage 3
+    float t_stage_3 = ceiling(hw->act_latency/hw->mac_latency)*hw->ar;
+
+    //Stage 4
+    float t_stage_4 = val();
+
+    float max1 = (t_stage_1 > t_stage_2)? t_stage_1 : t_stage_2;
+    float max2 = (t_stage_3 > t_stage_4)? t_stage_3 : t_stage_4;
+    float max_stage = (max1 > max2) ? max1 : max2;
+    
+    float stage_1_stall = abs(max_stage - t_stage_1);
+    float stage_2_stall = abs(max_stage - t_stage_2);
+    float stage_3_stall = abs(max_stage - t_stage_3);
+    float stage_4_stall = abs(max_stage - t_stage_4);
+
+
+    float t_sub = (ceil(dat->hiden/hw->ac) + 3)*max_stage; // in us
+    float t_sub_stall = (stage_1_stall + stage_2_stall +stage_3_stall + stage_4_stall)*\
+                        ceil(dat->hiden/hw->ac)
+
+    float t_total = ceil(dat->nodes/hw->ar)*t_sub;
+    float t_total_stall = ceil(dat->nodes/hw->ar)*t_sub_stall;
+
+
+    std::cout<<"Hardware: "<<hw->pe_counts<<" PEs/MACs "<<" Aspect Ratio: "<<hw->ar<<"X"<<hw->ac<<std::endl;
+
+    std::cout<<"Stage1: "<<t_stage_1<<"  ns  "<<std::endl;
+    std::cout<<"Stage2: "<<t_stage_2<<"  ns  "<<std::endl;
+    std::cout<<"Stage3: "<<t_stage_3<<"  ns  "<<std::endl;
+    std::cout<<"Stage4: "<<t_stage_4<<"  ns  "<<std::endl;
+    std::cout<<"t_sub:  "<<t_sub<<"      ns  "<<std::endl;
+    
+    
+    std::cout<<"Total runtime:  "<<t_total/1000000<<"  ms  "<<std::endl;
+    std::cout<<"Total sync:  "<<t_total_stall/1000000<<"  ms  "<<std::endl;
+
+    //Only counts dynamic energy
+    float e_dram = edram_power * (ceiling(dat->nodes/hw->ar)*hw->ar*dat->feature_size*2/hw->dram_bandwidth \
+            + t_stage_1 * ceiling(dat->hiden/hw->ac) * ceiling(dat->nodes/hw->ar)*0.000000001 \
+            + ceiling(dat->hiden/hw->ac) * ceiling(dat->nodes/hw->ar) * dat->nodes * hw->ar * 2 * 2 /hw->dram_bandwidth); 
+
+    float e_activation = hw->ac * activation_power * ceiling(dat->hiden/hw->ac) * ceiling(dat->nodes/hw->ar) * t_stage_2;
+    float e_dense = hw->pe_counts * mac_power * ceiling(dat->hiden/hw->ac) * ceiling(dat->nodes/hw->ar) * t_stage_3;
+    float e_sparse = hw->pe_counts * pe_power * ceiling(dat->hiden/hw->ac) * ceiling(dat->nodes/hw->ar) * t_stage_4;
+
+    float e_total = e_dram + e_activation + e_dense + e_sparse;
+
+    std::cout<<"DRAM Energy: "<<e_dram/1000<<"  nj  "<<std::endl;
+    std::cout<<"Dense Energy: "<<e_dense/1000<<"  nj  "<<std::endl;
+    std::cout<<"Activation Energy: "<<e_activation/1000<<"  nj  "<<std::endl;
+    std::cout<<"Sparse Energy: "<<e_sparse/1000<<"  nj  "<<std::endl;
+    std::cout<<"Total Energy:  "<<e_total/1000<<"      nj  "<<std::endl;
+    
+    std::cout<<"Theoretical DRAM Bandwidth: 94 GB/s"<<std::endl;
+    float real_dram_bandwidth = (dat->nodes*dat->feature_size*2 \
+            + ceiling(dat->nodes/hw->ar)*dat->feature_size*dat->hiden*2 \
+            + (dat->csr_diag.at(0).size()+dat->csr_diag.at(1).size()+dat->csr_diag.at(2).size())*2 \   //col ID and Vals
+            + ceiling(dat->nodes/hw->ar)*dat->nodes * dat->hiden * 2 * 2)/t_total;
+    std::cout<<"Achieved DRAM Bandwidth: "<<real_dram_bandwidth<<" GB/s"<<std::endl;
+
+
+    if(baseline)
+        int flag = 1;
+    else
+        int flag = 2;
+    std::cout<<"Theoretical on-chip buffer Bandwidth: "<<hw->buf_bandwidth<<" GB/s"<<std::endl;
+    float real_buffer_bandwidth = (ceiling(dat->hiden/hw->ac)*dat->nodes*dat->feature_size*2 \
+            + ceiling(dat->nodes/hw->ar)*dat->feature_size*dat->hiden*2 \
+            + ceiling(dat->hiden/hw->ac)*dat->csr_diag.at(1).size()*2*flag \   //col ID and Vals
+            + ceiling(dat->nodes/hw->ar)*dat->nodes * dat->hiden * 2 * 2)/t_total;  //read & write
+    std::cout<<"Achieved on-chip buffer Bandwidth: "<<real_buffer_bandwidth<<" GB/s"<<std::endl;
+}
