@@ -71,6 +71,8 @@ class Acc{
         const float mac_latency = 2.774; //in ns
         const float act_latency = 7.546; // in ns
         const float pe_latency = 2.774;
+        //https://www.tomshardware.com/reviews/intel-core-i7-5960x-haswell-e-cpu,3918-13.html
+        const float dram_power = 3060; // in mw
         const float mac_power = 5.03362; // in mw
         const float activation_power = 359.475;
         const float pe_power = 5.05575;

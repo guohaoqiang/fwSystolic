@@ -67,7 +67,8 @@ class Analysis{
 
       unsigned int find_nz_pos(TYPE_LENGTH n);
       unsigned int count_nnz(TYPE_LENGTH n, unsigned int pos);
-      void val();
+      long val();
+      void timing();
       void permutate(std::shared_ptr<std::vector<std::shared_ptr<std::vector<std::vector<int>>>>> &intile,\
         std::shared_ptr<std::vector<int>> &vec);
       void print_tile(const std::shared_ptr<std::vector<std::shared_ptr<std::vector<std::vector<int>>>>> &intile);

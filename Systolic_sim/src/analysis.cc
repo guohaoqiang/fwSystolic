@@ -175,13 +175,14 @@ void Analysis::print(){
     }
 }
 
-void Analysis::val(){
+long Analysis::val(){
     int base = 0;
     std::vector<int> mark(hw->ar,0);
     std::vector<int> count(hw->ar,0);
     //the inner most vector denotes an non-zero entry <row,col,val>
 
     
+    long max_col_tile_delay = 0; 
     for(size_t i=base; i<dat->csr_diag.at(0).size()-1; i += hw->ar){ // iterate over col-tiles
         std::cout<<"col tile: "<<i<<std::endl;
         for(size_t j=i; j<std::min(i+hw->ar,dat->csr_diag.at(0).size()-1); j++){ // iterate over cols in a col-tile
@@ -189,6 +190,7 @@ void Analysis::val(){
             //VLOG(2)<<"mark["<<j%hw->ar<<"]="<<dat->data.at(0).at(j);
         }
         count.assign(hw->ar,0);
+        long col_tile_delay = 0; 
         // in adj, #row == #col
         for(size_t k1=0; k1<dat->csr_diag.at(0).size()-1; k1 += window){ // iterate over row-tiles
             VLOG(2)<<"row tile: "<<k1;
@@ -233,11 +235,14 @@ void Analysis::val(){
            
             bits->clear(); 
             
-            comp_delays += debubbling(tile,bits);
+            col_tile_delay += debubbling(tile,bits); 
 
             deconstruct_tab();
             deconstruct_self_loop();
         } // end visiting all row-tiles of a specific col-tile
+        comp_delays += col_tile_delay;
+        if(col_tile_delay > max_col_tile_delay)
+            max_col_tile_delay = col_tile_delay;
     } // end visiting all col-tiles
     std::cout<<"total delays: "<<comp_delays<<std::endl;
     
@@ -253,6 +258,7 @@ void Analysis::val(){
     std::cout<<"conflicts: "<<conflicts<<std::endl;
     std::cout<<"shannon entropy: "<<shannon_entropy<<std::endl;
     
+    return max_col_tile_delay; 
 }
 void Analysis::print_tile(const std::shared_ptr<std::vector<std::shared_ptr<std::vector<std::vector<int>>>>> &intile){
     for(auto row:(*intile)){
@@ -634,19 +640,20 @@ void Analysis::timing(){
     //Stage 1
     //channel width = 8 Byte, so a load transaction read 4 entries, each of which is 2 Bytes.
     //row-major
-    float t_stage_load_Col_tile_w = (dat->feature_size*ceiling(hw->ac/4)*8)/hw->dram_bandwidth; //in the units of ns 
+    float t_stage_load_Col_tile_w = (dat->feature_size*ceil(hw->ac/4)*8)/hw->dram_bandwidth; //in the units of ns 
     float t_stage_1 = t_stage_load_Col_tile_w;
     
     
     //Stage 2
     //channel width = 4 Bytes. An operand is 2 Bytes.
-    float t_load_from_buf_x_one_cycle = ceiling(hw->ar/hw->bk/2)*32*hw->bk/hw->buf_bandwidth;
-    float t_load_from_buf_w_one_cycle = ceiling(hw->ac/hw->bk/2)*32*hw->bk/hw->buf_bandwidth;
-    float t_stage_2 = (dat->featue_size + hw->ar + hw->ac) * \
+    float t_load_from_buf_x_one_cycle = ceil(hw->ar/hw->bk/2)*32*hw->bk/hw->buf_bandwidth;
+    float t_load_from_buf_w_one_cycle = ceil(hw->ac/hw->bk/2)*32*hw->bk/hw->buf_bandwidth;
+
+    float t_stage_2 = (dat->feature_size + hw->ar + hw->ac) * \
             (t_load_from_buf_x_one_cycle > hw->mac_latency ? t_load_from_buf_x_one_cycle : hw->mac_latency); 
     
     //Stage 3
-    float t_stage_3 = ceiling(hw->act_latency/hw->mac_latency)*hw->ar;
+    float t_stage_3 = ceil(hw->act_latency/hw->mac_latency)*hw->ar;
 
     //Stage 4
     float t_stage_4 = val();
@@ -663,13 +670,13 @@ void Analysis::timing(){
 
     float t_sub = (ceil(dat->hiden/hw->ac) + 3)*max_stage; // in us
     float t_sub_stall = (stage_1_stall + stage_2_stall +stage_3_stall + stage_4_stall)*\
-                        ceil(dat->hiden/hw->ac)
+                        ceil(dat->hiden/hw->ac);
 
     float t_total = ceil(dat->nodes/hw->ar)*t_sub;
     float t_total_stall = ceil(dat->nodes/hw->ar)*t_sub_stall;
 
 
-    std::cout<<"Hardware: "<<hw->pe_counts<<" PEs/MACs "<<" Aspect Ratio: "<<hw->ar<<"X"<<hw->ac<<std::endl;
+    std::cout<<"Hardware: "<<hw->pes<<" PEs/MACs |"<<" Aspect Ratio: "<<hw->ar<<"X"<<hw->ac<<std::endl;
 
     std::cout<<"Stage1: "<<t_stage_1<<"  ns  "<<std::endl;
     std::cout<<"Stage2: "<<t_stage_2<<"  ns  "<<std::endl;
@@ -682,13 +689,14 @@ void Analysis::timing(){
     std::cout<<"Total sync:  "<<t_total_stall/1000000<<"  ms  "<<std::endl;
 
     //Only counts dynamic energy
-    float e_dram = edram_power * (ceiling(dat->nodes/hw->ar)*hw->ar*dat->feature_size*2/hw->dram_bandwidth \
-            + t_stage_1 * ceiling(dat->hiden/hw->ac) * ceiling(dat->nodes/hw->ar)*0.000000001 \
-            + ceiling(dat->hiden/hw->ac) * ceiling(dat->nodes/hw->ar) * dat->nodes * hw->ar * 2 * 2 /hw->dram_bandwidth); 
+    float e_dram = hw->dram_power * (ceil(dat->nodes/hw->ar)*hw->ar*dat->feature_size*2/hw->dram_bandwidth \
+            + t_stage_1 * ceil(dat->hiden/hw->ac) * ceil(dat->nodes/hw->ar)*0.000000001 \
+            + ceil(dat->hiden/hw->ac) * ceil(dat->nodes/hw->ar) * dat->nodes * hw->ar * 2 * 2 /hw->dram_bandwidth); 
 
-    float e_activation = hw->ac * activation_power * ceiling(dat->hiden/hw->ac) * ceiling(dat->nodes/hw->ar) * t_stage_2;
-    float e_dense = hw->pe_counts * mac_power * ceiling(dat->hiden/hw->ac) * ceiling(dat->nodes/hw->ar) * t_stage_3;
-    float e_sparse = hw->pe_counts * pe_power * ceiling(dat->hiden/hw->ac) * ceiling(dat->nodes/hw->ar) * t_stage_4;
+    // Mu & Sigma
+    float e_activation = 2*hw->ac * hw->activation_power * ceil(dat->hiden/hw->ac) * ceil(dat->nodes/hw->ar) * t_stage_2;
+    float e_dense = 2*hw->pes * hw->mac_power * ceil(dat->hiden/hw->ac) * ceil(dat->nodes/hw->ar) * t_stage_3;
+    float e_sparse = 2*hw->pes * hw->pe_power * ceil(dat->hiden/hw->ac) * ceil(dat->nodes/hw->ar) * t_stage_4;
 
     float e_total = e_dram + e_activation + e_dense + e_sparse;
 
@@ -699,21 +707,24 @@ void Analysis::timing(){
     std::cout<<"Total Energy:  "<<e_total/1000<<"      nj  "<<std::endl;
     
     std::cout<<"Theoretical DRAM Bandwidth: 94 GB/s"<<std::endl;
+    // the second to last item: col ID and Vals
     float real_dram_bandwidth = (dat->nodes*dat->feature_size*2 \
-            + ceiling(dat->nodes/hw->ar)*dat->feature_size*dat->hiden*2 \
-            + (dat->csr_diag.at(0).size()+dat->csr_diag.at(1).size()+dat->csr_diag.at(2).size())*2 \   //col ID and Vals
-            + ceiling(dat->nodes/hw->ar)*dat->nodes * dat->hiden * 2 * 2)/t_total;
+            + ceil(dat->nodes/hw->ar)*dat->feature_size*dat->hiden*2 \
+            + (dat->csr_diag.at(0).size()+dat->csr_diag.at(1).size()+dat->csr_diag.at(2).size())*2 \
+            + ceil(dat->nodes/hw->ar)*dat->nodes * dat->hiden * 2 * 2)/t_total;
     std::cout<<"Achieved DRAM Bandwidth: "<<real_dram_bandwidth<<" GB/s"<<std::endl;
 
-
+    bool baseline = false;
+    int coefficient = 0;
     if(baseline)
-        int flag = 1;
+        coefficient = 1;
     else
-        int flag = 2;
+        coefficient = 2;
     std::cout<<"Theoretical on-chip buffer Bandwidth: "<<hw->buf_bandwidth<<" GB/s"<<std::endl;
-    float real_buffer_bandwidth = (ceiling(dat->hiden/hw->ac)*dat->nodes*dat->feature_size*2 \
-            + ceiling(dat->nodes/hw->ar)*dat->feature_size*dat->hiden*2 \
-            + ceiling(dat->hiden/hw->ac)*dat->csr_diag.at(1).size()*2*flag \   //col ID and Vals
-            + ceiling(dat->nodes/hw->ar)*dat->nodes * dat->hiden * 2 * 2)/t_total;  //read & write
+    //last two items: col ID and Vals, //read & write
+    float real_buffer_bandwidth = (ceil(dat->hiden/hw->ac)*dat->nodes*dat->feature_size*2 \
+            + ceil(dat->nodes/hw->ar)*dat->feature_size*dat->hiden*2 \
+            + ceil(dat->hiden/hw->ac)*dat->csr_diag.at(1).size()*2*coefficient \
+            + ceil(dat->nodes/hw->ar)*dat->nodes * dat->hiden * 2 * 2)/t_total;  
     std::cout<<"Achieved on-chip buffer Bandwidth: "<<real_buffer_bandwidth<<" GB/s"<<std::endl;
 }

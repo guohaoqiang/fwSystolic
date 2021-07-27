@@ -13,7 +13,7 @@ Acc::Acc(const int l2_, const int l1_, \
             bk = ar;
         else
             bk = 32;
-        buf_bandwdth = bk * 5.6; // equals bk times 5.6GB/s = 5.6B/ns
+        buf_bandwidth = bk * 5.6; // equals bk times 5.6GB/s = 5.6B/ns
         check_pe_total();
         /*
         for(int i=0; i<pec_total; i++){
