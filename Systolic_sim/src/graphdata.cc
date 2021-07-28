@@ -58,8 +58,10 @@ Graph::Graph(const std::string& name1):data(3,std::vector<int>()),\
     
     csr_diag.at(0).push_back(0);
     int base = 0;
+    int new_base = 0;
     int num = 0;
     for(size_t i=1;i<this->data.at(0).size();++i){
+        //int expected_sum = this->data.at(0).at(i)-this->data.at(0).at(i-1)+1;
         //VLOG(2)<<"i = "<<i;
         //VLOG(2)<<"base = "<<base;
         //VLOG(2)<<"# = "<<this->data.at(0).at(i)-this->data.at(0).at(i-1);
@@ -70,11 +72,15 @@ Graph::Graph(const std::string& name1):data(3,std::vector<int>()),\
         num = this->data.at(0).at(i)-this->data.at(0).at(i-1);
         if(num > this->max_num)
             this->max_num = num;
+        //std::cout<<"@74 expected num: "<<expected_sum<<std::endl;
+        //std::cout<<"@75 result num: "<<temp.size()<<std::endl;
         for(int j=base;j<base+this->data.at(0).at(i)-this->data.at(0).at(i-1);++j){
             temp[this->data.at(1).at(j)] = this->data.at(2).at(j);
             //csr_diag.at(1).push_back(this->data.at(1).at(j));
           //  VLOG(2)<<"this->data.at(1).at("<<j<<") = "<<this->data.at(1).at(j);
         }
+        //std::cout<<"@81 expected num: "<<expected_sum<<std::endl;
+        //std::cout<<"@82 result num: "<<temp.size()<<std::endl;
         for(auto tmp_entry:temp){
             csr_diag.at(1).push_back(tmp_entry.first);
             csr_diag.at(2).push_back(tmp_entry.second);
@@ -82,12 +88,25 @@ Graph::Graph(const std::string& name1):data(3,std::vector<int>()),\
           //  VLOG(2)<<"this->data.at(1).at("<<j<<") = "<<this->data.at(1).at(j);
         }
         //std::sort(csr_diag.at(1).begin()+base+i-1,csr_diag.at(1).begin()+base+i-1+this->data.at(0).at(i)-this->data.at(0).at(i-1)+1);
+        csr_diag.at(0).push_back(new_base+temp.size());
+        new_base += temp.size();
         base += this->data.at(0).at(i)-this->data.at(0).at(i-1);
-        csr_diag.at(0).push_back(base+i);
+        //std::cout<<"expected num: "<<expected_sum<<std::endl;
+        //std::cout<<"result num: "<<temp.size()<<std::endl;
+        //int result_sum = temp.size();
+        //assert(expected_sum == result_sum);
     }
     this->max_num += 1;
 //    print_data();
     LOG(INFO) << "graph construct over.";
+    /*
+    std::cout<<"NNZ in data: "<<*(this->data.at(0).end()-1)<<std::endl;
+    std::cout<<"nodes: "<<this->data.at(0).size()-1<<std::endl;
+    std::cout<<"NNZ in data: "<<this->data.at(1).size()<<std::endl;
+    std::cout<<"NNZ in csr_diag: "<<*(this->csr_diag.at(0).end()-1)<<std::endl;
+    std::cout<<"NNZ in csr_diag: "<<this->csr_diag.at(1).size()<<std::endl;
+    std::cout<<"NNZ in csr_diag: "<<this->csr_diag.at(2).size()<<std::endl;
+    */
 }
 
 void Graph::load_adj(const std::string& name0){
