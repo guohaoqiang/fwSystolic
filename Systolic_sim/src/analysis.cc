@@ -255,7 +255,8 @@ long Analysis::val(){
         float temp = (float)bk_cts.at(i)/nnz_total;
         shannon_entropy -= temp*log2(temp)/log2(hw->bk);
     }
-    std::cout<<"conflicts: "<<conflicts<<std::endl;
+    std::cout<<"max_conflicts: "<<max_conflicts<<std::endl;
+    std::cout<<"total_conflicts: "<<total_conflicts<<std::endl;
     std::cout<<"shannon entropy: "<<shannon_entropy<<std::endl;
     
     return max_col_tile_delay; 
@@ -439,6 +440,7 @@ void Analysis::linda_mem_analysis(const std::shared_ptr<std::vector<std::shared_
     }
     long long counts = -1;
     std::set<int> bk_sets;
+    long long conflicts = 0;
     for(size_t i=0; i<length; ++i){ 
         int nnz = 0;
         for(size_t j=0; j<dataflow_in->size(); ++j){ 
@@ -451,9 +453,12 @@ void Analysis::linda_mem_analysis(const std::shared_ptr<std::vector<std::shared_
                 continue;
             }
         }
+        total_conflicts += (nnz - bk_sets.size());
         conflicts += (nnz-bk_sets.size());
         bk_sets.clear();
     }
+    if(conflicts>max_conflicts)
+        max_conflicts = conflicts;
     /*
     long long nnz_total = 0;
     for(size_t i=0; i<hw->ar; ++i){
@@ -476,6 +481,7 @@ void Analysis::c2sr_mem_analysis(const std::shared_ptr<std::vector<std::shared_p
             length = p->size();
     }
     
+    long long conflicts = 0;
     std::set<int> bk_sets;
     for(size_t i=0; i<length; ++i){ 
         int nnz = 0;
@@ -486,9 +492,12 @@ void Analysis::c2sr_mem_analysis(const std::shared_ptr<std::vector<std::shared_p
                 bk_cts.at(dataflow_in->at(j)->at(i).at(0)%hw->bk)++;
             }
         }
+        total_conflicts += (nnz - bk_sets.size());
         conflicts += (nnz - bk_sets.size());
         bk_sets.clear();
     }
+    if(conflicts>max_conflicts)
+        max_conflicts = conflicts;
 }
 void Analysis::val_naive1(){
     int base = 0;
@@ -653,18 +662,20 @@ void Analysis::timing(){
     
     //Stage 2
     //channel width = 4 Bytes. An operand is 2 Bytes.
-    float t_load_from_buf_x_one_cycle = ceil((float)hw->ar/hw->bk/2)*32*hw->bk/hw->buf_bandwidth;
-    float t_load_from_buf_w_one_cycle = ceil((float)hw->ac/hw->bk/2)*32*hw->bk/hw->buf_bandwidth;
+    float t_load_from_buf_x_one_cycle = ceil((float)hw->ar/hw->bk/2)*4*hw->bk/hw->buf_bandwidth;
+    float t_load_from_buf_w_one_cycle = ceil((float)hw->ac/hw->bk/2)*4*hw->ac/hw->buf_bandwidth;
 
+     
+    float t_stage_2_load_max = t_load_from_buf_x_one_cycle > t_load_from_buf_w_one_cycle ? t_load_from_buf_x_one_cycle : t_load_from_buf_w_one_cycle; 
     float t_stage_2 = (dat->feature_size + hw->ar + hw->ac) * \
-            (t_load_from_buf_x_one_cycle > hw->mac_latency ? t_load_from_buf_x_one_cycle : hw->mac_latency); 
+            (t_stage_2_load_max > hw->mac_latency ? t_stage_2_load_max : hw->mac_latency); 
     
     //Stage 3
     float t_stage_3 = ceil(hw->act_latency/hw->mac_latency)*hw->ar*hw->act_latency;
 
-    //Stage 4
+    //Stage 4 : mu & sigma share one systolic array
     //float t_stage_4 = val()*hw->pe_latency + conflicts*hw->pe_latency;
-    float t_stage_4 = val_naive()*hw->pe_latency + conflicts*hw->pe_latency;
+    float t_stage_4 = 2*(val_naive()*hw->pe_latency + max_conflicts*hw->pe_latency);
 
     float max1 = (t_stage_1 > t_stage_2)? t_stage_1 : t_stage_2;
     float max2 = (t_stage_3 > t_stage_4)? t_stage_3 : t_stage_4;
@@ -695,7 +706,7 @@ void Analysis::timing(){
     
     
     std::cout<<"Total runtime:  "<<t_total/1000000<<"  ms  "<<std::endl;
-    std::cout<<"Total sync:  "<<t_total_stall/1000000<<"  ms  "<<std::endl;
+    //std::cout<<"Total sync:  "<<t_total_stall/1000000<<"  ms  "<<std::endl;
 
     //Only counts dynamic energy
     float e_dram = hw->dram_power * (ceil((float)dat->nodes/hw->ar)*hw->ar*dat->feature_size*2/hw->dram_bandwidth \
@@ -705,7 +716,7 @@ void Analysis::timing(){
     // Mu & Sigma
     float e_activation = 2*hw->ac * hw->activation_power * ceil((float)dat->hiden/hw->ac) * ceil((float)dat->nodes/hw->ar) * t_stage_3;
     float e_dense = 2*hw->pes * hw->mac_power * ceil((float)dat->hiden/hw->ac) * ceil((float)dat->nodes/hw->ar) * t_stage_2;
-    float e_sparse = 2*hw->pes * hw->pe_power * ceil((float)dat->hiden/hw->ac) * ceil((float)dat->nodes/hw->ar) * t_stage_4;
+    float e_sparse = hw->pes * hw->pe_power * ceil((float)dat->hiden/hw->ac) * ceil((float)dat->nodes/hw->ar) * t_stage_4;
 
     float e_total = e_dram + e_activation + e_dense + e_sparse;
 

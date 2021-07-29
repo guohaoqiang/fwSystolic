@@ -77,7 +77,8 @@ class Analysis{
       std::shared_ptr<std::vector<unsigned int>> self_loop= std::make_shared<std::vector<unsigned int>>();
       std::shared_ptr<std::vector<std::vector<int>>> tab = std::make_shared<std::vector<std::vector<int>>>();
       long  comp_delays = 0; 
-      long long conflicts = 0;
+      long long total_conflicts = 0;
+      long long max_conflicts = 0;
       std::vector<long long> bk_cts;
       void linda_mem_analysis(const std::shared_ptr<std::vector<std::shared_ptr<std::vector<std::vector<int>>>>> &dataflow_in);
       void c2sr_mem_analysis(const std::shared_ptr<std::vector<std::shared_ptr<std::vector<std::vector<int>>>>> &dataflow_in);
